@@ -1,0 +1,26 @@
+{
+    "angeo_brand_visibility_audit": {
+        "column": {
+            "id": true,
+            "brand_name": true,
+            "brand_domain": true,
+            "overall_score": true,
+            "grade": true,
+            "provider_scores": true,
+            "signal_rates": true,
+            "results_json": true,
+            "triggered_by": true,
+            "queries_count": true,
+            "errors_count": true,
+            "from_cache": true,
+            "created_at": true
+        },
+        "index": {
+            "ANGEO_BRAND_VISIBILITY_AUDIT_CREATED_AT": true,
+            "ANGEO_BRAND_VISIBILITY_AUDIT_OVERALL_SCORE": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}

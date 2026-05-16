@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">angeo_brand_vis_history_listing.angeo_brand_vis_history_listing_data_source</item>
+        </item>
+    </argument>
+
+    <settings>
+        <buttons>
+            <button name="run_audit">
+                <url path="angeo_brand_vis/run/index"/>
+                <class>primary</class>
+                <label translate="true">Run New Audit</label>
+            </button>
+        </buttons>
+        <spinner>angeo_brand_vis_history_columns</spinner>
+        <deps>
+            <dep>angeo_brand_vis_history_listing.angeo_brand_vis_history_listing_data_source</dep>
+        </deps>
+    </settings>
+
+    <dataSource name="angeo_brand_vis_history_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>Angeo_AeoBrandVisibility::run</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider"
+                      name="angeo_brand_vis_history_listing_data_source">
+            <settings>
+                <requestFieldName>id</requestFieldName>
+                <primaryFieldName>id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <paging name="listing_paging"/>
+        <filters name="listing_filters"/>
+        <filterSearch name="fulltext"/>
+    </listingToolbar>
+
+    <columns name="angeo_brand_vis_history_columns">
+        <settings>
+            <editorConfig>
+                <param name="enabled" xsi:type="boolean">false</param>
+            </editorConfig>
+            <childDefaults>
+                <param name="fieldAction" xsi:type="array">
+                    <item name="provider" xsi:type="string">angeo_brand_vis_history_listing.angeo_brand_vis_history_listing.angeo_brand_vis_history_columns.actions</item>
+                    <item name="target" xsi:type="string">applyAction</item>
+                    <item name="params" xsi:type="array">
+                        <item name="0" xsi:type="string">view</item>
+                        <item name="1" xsi:type="string">${ $.$data.rowIndex }</item>
+                    </item>
+                </param>
+            </childDefaults>
+        </settings>
+
+        <column name="id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">#</label>
+                <sorting>desc</sorting>
+            </settings>
+        </column>
+
+        <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Date</label>
+                <sorting>desc</sorting>
+            </settings>
+        </column>
+
+        <column name="brand_name">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Brand</label>
+            </settings>
+        </column>
+
+        <column name="overall_score"
+                class="Angeo\AeoBrandVisibility\Ui\Component\Listing\Column\Score">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Score</label>
+                <sorting>desc</sorting>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+            </settings>
+        </column>
+
+        <column name="grade"
+                class="Angeo\AeoBrandVisibility\Ui\Component\Listing\Column\Grade">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Grade</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+            </settings>
+        </column>
+
+        <column name="triggered_by">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Source</label>
+            </settings>
+        </column>
+
+        <column name="queries_count">
+            <settings>
+                <label translate="true">Queries</label>
+            </settings>
+        </column>
+
+        <column name="errors_count">
+            <settings>
+                <label translate="true">Errors</label>
+            </settings>
+        </column>
+
+        <column name="from_cache"
+                class="Angeo\AeoBrandVisibility\Ui\Component\Listing\Column\CacheFlag">
+            <settings>
+                <label translate="true">Source</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+            </settings>
+        </column>
+
+        <column name="signal_rates"
+                class="Angeo\AeoBrandVisibility\Ui\Component\Listing\Column\SignalRates">
+            <settings>
+                <label translate="true">Signals</label>
+                <sortable>false</sortable>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+            </settings>
+        </column>
+
+        <actionsColumn name="actions"
+                       class="Angeo\AeoBrandVisibility\Ui\Component\Listing\Column\Actions">
+            <settings>
+                <indexField>id</indexField>
+                <label translate="true">Actions</label>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

@@ -1,0 +1,681 @@
+<?php /** @var \Magento\Backend\Block\Template $block */ ?>
+<style>
+/* ── Base ─────────────────────────────────────────────────────────── */
+.bv { max-width:1060px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+.bv-box { background:#fff; border:1px solid #e3e8ee; border-radius:8px; padding:22px 26px; margin-bottom:16px; }
+.bv-box h3 { margin:0 0 4px 0; font-size:14px; font-weight:700; color:#111827; }
+.bv-sub { font-size:13px; color:#6b7280; margin:0 0 14px 0; }
+
+/* ── Tabs ─────────────────────────────────────────────────────────── */
+.bv-tabs { display:flex; gap:0; border-bottom:2px solid #e3e8ee; margin-bottom:18px; }
+.bv-tab { padding:9px 20px; font-size:13px; font-weight:600; color:#6b7280;
+          cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+.bv-tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+.bv-tab-pane { display:none; }
+.bv-tab-pane.active { display:block; }
+
+/* ── Score ring ───────────────────────────────────────────────────── */
+.bv-ring { display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+           width:106px; height:106px; border-radius:50%; border:7px solid #e3e8ee;
+           font-size:28px; font-weight:900; flex-shrink:0; transition:all .3s; }
+.bv-ring.a { border-color:#16a34a; color:#16a34a; }
+.bv-ring.b { border-color:#2563eb; color:#2563eb; }
+.bv-ring.c { border-color:#d97706; color:#d97706; }
+.bv-ring.d { border-color:#ea580c; color:#ea580c; }
+.bv-ring.f { border-color:#dc2626; color:#dc2626; }
+.bv-ring-grade { font-size:11px; font-weight:600; margin-top:2px; opacity:.8; }
+
+/* ── Signal pills ─────────────────────────────────────────────────── */
+.bv-sigs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.bv-sig { display:flex; flex-direction:column; align-items:center; min-width:110px;
+          border:1px solid #e3e8ee; border-radius:8px; padding:8px 10px; background:#f9fafb; }
+.bv-sig .sr { font-size:20px; font-weight:800; }
+.bv-sig .sl { font-size:11px; color:#6b7280; margin-top:2px; text-align:center; }
+.bv-sig.hi { background:#f0fdf4; border-color:#86efac; }
+.bv-sig.mi { background:#fffbeb; border-color:#fcd34d; }
+.bv-sig.lo { background:#fef2f2; border-color:#fca5a5; }
+
+/* ── Trend chart ──────────────────────────────────────────────────── */
+.bv-chart-wrap { position:relative; height:160px; margin-top:12px; }
+.bv-chart-svg { width:100%; height:100%; overflow:visible; }
+
+/* ── Stat cards ───────────────────────────────────────────────────── */
+.bv-stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:12px; }
+.bv-stat-card { border:1px solid #e3e8ee; border-radius:8px; padding:12px 14px; text-align:center; background:#f9fafb; }
+.bv-stat-card .val { font-size:26px; font-weight:800; color:#111827; }
+.bv-stat-card .lbl { font-size:11px; color:#6b7280; margin-top:3px; }
+
+/* ── History table ────────────────────────────────────────────────── */
+.bv-history-tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+.bv-history-tbl th { text-align:left; padding:8px 12px; border-bottom:2px solid #e3e8ee;
+                      font-weight:600; color:#374151; font-size:12px; }
+.bv-history-tbl td { padding:8px 12px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+.bv-history-tbl tr:hover td { background:#f9fafb; }
+.bv-grade-badge { display:inline-block; width:28px; height:28px; border-radius:50%; text-align:center;
+                  line-height:28px; font-weight:800; font-size:13px; color:#fff; }
+.bv-grade-a { background:#16a34a; } .bv-grade-b { background:#2563eb; }
+.bv-grade-c { background:#d97706; } .bv-grade-d { background:#ea580c; } .bv-grade-f { background:#dc2626; }
+.bv-trigger { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; }
+.bv-trigger.admin { background:#dbeafe; color:#1e40af; }
+.bv-trigger.cron  { background:#d1fae5; color:#065f46; }
+.bv-trigger.cli   { background:#f3f4f6; color:#374151; }
+
+/* ── Result cards ─────────────────────────────────────────────────── */
+.bv-cards { display:grid; gap:10px; margin-top:12px; }
+.bv-card { border:1px solid #e3e8ee; border-radius:8px; padding:14px 16px; }
+.bv-card-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.bv-card-score { font-size:24px; font-weight:900; flex-shrink:0; }
+.bv-card-model { font-weight:700; font-size:13px; }
+.bv-card-prompt { font-size:11px; color:#6b7280; margin-top:2px; font-style:italic; }
+.bv-badges { display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; }
+.bv-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.bv-badge.y { background:#dcfce7; color:#166534; }
+.bv-badge.n { background:#fee2e2; color:#991b1b; }
+.bv-response { margin-top:8px; font-size:12px; background:#f9fafb; border:1px solid #e3e8ee;
+               border-radius:4px; padding:8px 10px; max-height:100px; overflow-y:auto;
+               line-height:1.6; white-space:pre-wrap; color:#374151; }
+
+/* ── Tester ───────────────────────────────────────────────────────── */
+.bv-tester-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.bv-tester-row > div { display:flex; flex-direction:column; gap:4px; }
+.bv-tester-row label { font-size:12px; color:#6b7280; }
+.bv-test-resp { font-size:12px; background:#f9fafb; border:1px solid #e3e8ee;
+                border-radius:6px; padding:12px 14px; max-height:200px; overflow-y:auto;
+                white-space:pre-wrap; line-height:1.6; color:#374151; margin-top:10px; }
+</style>
+
+<div class="bv">
+    <!-- Header -->
+    <div class="admin__page-section-title" style="margin-bottom:16px;">
+        <span class="title"><?= $block->escapeHtml(__('Brand Visibility in AI Models')) ?></span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bv-tabs">
+        <div class="bv-tab active" onclick="bvTab('run')">▶ Run Audit</div>
+        <div class="bv-tab" onclick="bvTab('stats')">📊 Statistics</div>
+        <div class="bv-tab" onclick="bvTab('history')">📋 History</div>
+        <div class="bv-tab" onclick="bvTab('test')">🔬 Single Test</div>
+        <div class="bv-tab" onclick="bvTab('plan')">🎯 Action Plan</div>
+    </div>
+
+    <!-- ── TAB: RUN ─────────────────────────────────────────────────────── -->
+    <div id="bv-pane-run" class="bv-tab-pane active">
+
+        <!-- Score panel (hidden until run) -->
+        <div class="bv-box" id="bv-score-panel" style="display:none;">
+            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+                <div class="bv-ring" id="bv-ring">—</div>
+                <div style="flex:1;min-width:200px;">
+                    <div style="font-size:16px;font-weight:700;color:#111827;" id="bv-headline"></div>
+                    <div style="font-size:12px;color:#9ca3af;margin:2px 0 8px;" id="bv-meta"></div>
+                    <div id="bv-prov-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"></div>
+                    <div class="bv-sigs" id="bv-sigs"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="bv-box">
+            <h3><?= $block->escapeHtml(__('Run Brand Visibility Audit')) ?></h3>
+            <p class="bv-sub"><?= $block->escapeHtml(__('Queries all enabled AI models with your configured prompts. Results are saved to history automatically.')) ?></p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <button id="bv-run-btn" class="action-primary scalable" onclick="bvRun(false)">▶ <?= $block->escapeHtml(__('Run Audit')) ?></button>
+                <button id="bv-ref-btn" class="action-default scalable" onclick="bvRun(true)">↺ <?= $block->escapeHtml(__('Force Refresh')) ?></button>
+                <a href="<?= $block->escapeUrl($block->getUrl('adminhtml/system_config/edit', ['section' => 'angeo_brand_vis'])) ?>"
+                   class="action-default scalable">⚙ <?= $block->escapeHtml(__('Configuration')) ?></a>
+            </div>
+            <div id="bv-err" style="display:none;margin-top:10px;color:#991b1b;font-size:13px;font-weight:600;"></div>
+        </div>
+
+        <!-- Query result cards -->
+        <div id="bv-cards-wrap" style="display:none;">
+            <div class="bv-box">
+                <h3><?= $block->escapeHtml(__('Query Results')) ?></h3>
+                <p class="bv-sub"><?= $block->escapeHtml(__('One card per AI provider × prompt combination.')) ?></p>
+                <div class="bv-cards" id="bv-cards"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TAB: STATISTICS ──────────────────────────────────────────────── -->
+    <div id="bv-pane-stats" class="bv-tab-pane">
+        <div class="bv-box">
+            <h3><?= $block->escapeHtml(__('Brand Visibility Statistics')) ?></h3>
+            <p class="bv-sub" id="bv-stats-meta"><?= $block->escapeHtml(__('Loading…')) ?></p>
+            <div class="bv-stat-row" id="bv-stat-cards"></div>
+            <div style="margin-top:20px;">
+                <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;"><?= $block->escapeHtml(__('Score Trend (last 30 fresh runs)')) ?></div>
+                <div class="bv-chart-wrap">
+                    <svg class="bv-chart-svg" id="bv-trend-svg" viewBox="0 0 800 150" preserveAspectRatio="none"></svg>
+                </div>
+            </div>
+            <div style="margin-top:20px;">
+                <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;"><?= $block->escapeHtml(__('Average Signal Rates')) ?></div>
+                <div id="bv-sig-avgs"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TAB: HISTORY ─────────────────────────────────────────────────── -->
+    <div id="bv-pane-history" class="bv-tab-pane">
+        <div class="bv-box">
+            <h3><?= $block->escapeHtml(__('Audit History')) ?></h3>
+            <p class="bv-sub"><?= $block->escapeHtml(__('Last 50 audit runs. Click a row to expand query details.')) ?></p>
+            <div id="bv-hist-wrap">
+                <table class="bv-history-tbl" id="bv-hist-tbl">
+                    <thead>
+                        <tr>
+                            <th><?= $block->escapeHtml(__('Date')) ?></th>
+                            <th><?= $block->escapeHtml(__('Score')) ?></th>
+                            <th><?= $block->escapeHtml(__('Grade')) ?></th>
+                            <th><?= $block->escapeHtml(__('Triggered By')) ?></th>
+                            <th><?= $block->escapeHtml(__('Queries')) ?></th>
+                            <th><?= $block->escapeHtml(__('Errors')) ?></th>
+                            <th><?= $block->escapeHtml(__('Mentioned')) ?></th>
+                            <th><?= $block->escapeHtml(__('Recommended')) ?></th>
+                            <th><?= $block->escapeHtml(__('URL Cited')) ?></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bv-hist-body">
+                        <tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:20px;">Loading history…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Detail drawer -->
+            <div id="bv-hist-detail" style="display:none;margin-top:16px;border-top:2px solid #e3e8ee;padding-top:14px;"></div>
+        </div>
+    </div>
+
+    <!-- ── TAB: ACTION PLAN ─────────────────────────────────────────────── -->
+    <div id="bv-pane-plan" class="bv-tab-pane">
+        <div class="bv-box" id="bv-plan-loading" style="display:none;">
+            <div style="color:#6b7280;font-size:13px;">Generating action plan…</div>
+        </div>
+        <div id="bv-plan-wrap" style="display:none;"></div>
+        <div class="bv-box" id="bv-plan-empty">
+            <h3>🎯 Brand Visibility Action Plan</h3>
+            <p class="bv-sub">Run the audit first (Run Audit tab), then come back here to see a personalised improvement roadmap.</p>
+            <button class="action-primary scalable" onclick="bvTab('run')">▶ Run Audit First</button>
+        </div>
+    </div>
+
+    <!-- ── TAB: SINGLE TEST ─────────────────────────────────────────────── -->
+    <div id="bv-pane-test" class="bv-tab-pane">
+        <div class="bv-box">
+            <h3><?= $block->escapeHtml(__('Single Query Tester')) ?></h3>
+            <p class="bv-sub"><?= $block->escapeHtml(__('Send one prompt to one provider and inspect the full raw response. Does not use cache and does not save to history.')) ?></p>
+            <?php
+            /** @var \Angeo\AeoBrandVisibility\Model\Config $cfg */
+            $cfg = \Magento\Framework\App\ObjectManager::getInstance()
+                ->get(\Angeo\AeoBrandVisibility\Model\Config::class);
+
+            $availableProviders = [];
+            if ($cfg->isGptEnabled() && $cfg->getGptApiKey() !== '') {
+                $availableProviders['chatgpt'] = 'ChatGPT (' . $cfg->getGptModel() . ')';
+            }
+            if ($cfg->isClaudeEnabled() && $cfg->getClaudeApiKey() !== '') {
+                $availableProviders['claude'] = 'Claude (' . $cfg->getClaudeModel() . ')';
+            }
+            if ($cfg->isPerplexityEnabled() && $cfg->getPerplexityApiKey() !== '') {
+                $availableProviders['perplexity'] = 'Perplexity (' . $cfg->getPerplexityModel() . ')';
+            }
+            if ($cfg->isGeminiEnabled() && $cfg->getGeminiApiKey() !== '') {
+                $availableProviders['gemini'] = 'Gemini (' . $cfg->getGeminiModel() . ')';
+            }
+            if ($cfg->isGroqEnabled() && $cfg->getGroqApiKey() !== '') {
+                $availableProviders['groq'] = 'Groq (' . $cfg->getGroqModel() . ')';
+            }
+            ?>
+            <div class="bv-tester-row">
+                <div>
+                    <label><?= $block->escapeHtml(__('Provider')) ?></label>
+                    <select id="bv-t-prov" class="admin__control-select" style="min-width:200px;">
+                        <?php if (empty($availableProviders)): ?>
+                            <option value=""><?= $block->escapeHtml(__('— No providers configured —')) ?></option>
+                        <?php else: ?>
+                            <?php foreach ($availableProviders as $id => $label): ?>
+                                <option value="<?= $block->escapeHtmlAttr($id) ?>"><?= $block->escapeHtml($label) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <div>
+                    <label><?= $block->escapeHtml(__('Prompt type')) ?></label>
+                    <select id="bv-t-prompt" class="admin__control-select" style="min-width:210px;">
+                        <option value="recommendation"><?= $block->escapeHtml(__('Recommendation')) ?></option>
+                        <option value="category"><?= $block->escapeHtml(__('Category Search')) ?></option>
+                        <option value="brand_direct" selected><?= $block->escapeHtml(__('Brand Direct')) ?></option>
+                        <option value="product_search"><?= $block->escapeHtml(__('Product Search')) ?></option>
+                        <option value="comparison"><?= $block->escapeHtml(__('Comparison')) ?></option>
+                        <option value="gift_guide"><?= $block->escapeHtml(__('Gift Guide')) ?></option>
+                    </select>
+                </div>
+                <div style="align-self:flex-end;">
+                    <button id="bv-test-btn" class="action-default scalable" onclick="bvTest()"><?= $block->escapeHtml(__('Test')) ?></button>
+                </div>
+            </div>
+            <div id="bv-test-out" style="display:none;margin-top:14px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const BV_RUN_URL  = '<?= $block->escapeJs($block->getUrl('angeo_brand_vis/run/index')) ?>';
+    const BV_FORM_KEY = '<?= $block->escapeJs($block->getFormKey()) ?>';
+const BV_TEST_URL = '<?= $block->escapeJs($block->getUrl('angeo_brand_vis/query/single')) ?>';
+const BV_HIST_URL = '<?= $block->escapeJs($block->getUrl('angeo_brand_vis/history/data')) ?>';
+const BV_VIEW_URL = '<?= $block->escapeJs($block->getUrl('angeo_brand_vis/history/viewData')) ?>';
+
+const SIGNALS = {
+    mentioned:'Mentioned', recommended:'Recommended', url_cited:'URL Cited',
+    first_result:'1st Position', positive_sentiment:'Positive Tone'
+};
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function bvTab(name) {
+    document.querySelectorAll('.bv-tab,.bv-tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelector('.bv-tab:nth-child(' + ({run:1,stats:2,history:3,test:4,plan:5}[name]) + ')').classList.add('active');
+    document.getElementById('bv-pane-' + name).classList.add('active');
+    if (name === 'history') bvLoadHistory();
+    if (name === 'stats')   bvLoadHistory(); // reuses same endpoint
+    if (name === 'plan')    bvLoadPlan();
+}
+
+// ── Run audit ────────────────────────────────────────────────────────────────
+function bvRun(forceRefresh) {
+    setBtns(true);
+    document.getElementById('bv-err').style.display = 'none';
+    fetch(BV_RUN_URL + (forceRefresh ? '?refresh=1' : ''), {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},
+        body:'form_key=' + encodeURIComponent(BV_FORM_KEY)
+    }).then(r => r.json()).then(data => {
+        if (!data.success) { showErr(data.message); return; }
+        renderScore(data);
+        renderCards(data.results);
+        if (data.statistics) renderStats(data.statistics);
+    }).catch(e => showErr(e.message)).finally(() => setBtns(false));
+}
+function setBtns(loading) {
+    document.getElementById('bv-run-btn').disabled = loading;
+    document.getElementById('bv-ref-btn').disabled = loading;
+    document.getElementById('bv-run-btn').textContent = loading ? 'Querying AI…' : '▶ Run Audit';
+}
+function showErr(msg) {
+    const el = document.getElementById('bv-err');
+    el.textContent = 'Error: ' + msg;
+    el.style.display = 'block';
+}
+
+// ── Score panel ──────────────────────────────────────────────────────────────
+function renderScore(data) {
+    const score = data.overall_score, grade = data.grade.toLowerCase();
+    const ring = document.getElementById('bv-ring');
+    ring.className = 'bv-ring ' + grade;
+    ring.innerHTML = score + '<span class="bv-ring-grade">Grade ' + bvEsc(data.grade) + '</span>';
+    document.getElementById('bv-headline').textContent = 'Brand Visibility Score: ' + score + '/100';
+    document.getElementById('bv-meta').textContent = (data.from_cache ? '⚡ Cached — ' : '🔄 Fresh — ') + 'Generated: ' + data.generated_at;
+
+    const chips = document.getElementById('bv-prov-chips');
+    chips.innerHTML = '';
+    if (data.scores_by_provider) {
+        Object.entries(data.scores_by_provider).forEach(([id, s]) => {
+            if (s !== null) chips.innerHTML += '<span style="background:#dbeafe;color:#1e40af;font-size:12px;font-weight:600;padding:3px 12px;border-radius:20px;">' + bvEsc(id) + ': ' + s + '/100</span>';
+        });
+    }
+
+    const sigEl = document.getElementById('bv-sigs');
+    sigEl.innerHTML = '';
+    Object.entries(SIGNALS).forEach(([k, label]) => {
+        const rate = data.signal_rates[k] ?? 0;
+        const cls  = rate >= 60 ? 'hi' : rate >= 30 ? 'mi' : 'lo';
+        sigEl.innerHTML += '<div class="bv-sig ' + cls + '"><span class="sr">' + rate + '%</span><span class="sl">' + label + '</span></div>';
+    });
+
+    document.getElementById('bv-score-panel').style.display = 'block';
+}
+
+// ── Result cards ─────────────────────────────────────────────────────────────
+function renderCards(results) {
+    const c = document.getElementById('bv-cards');
+    c.innerHTML = '';
+    results.forEach(r => {
+        const clr = r.score >= 60 ? '#16a34a' : r.score >= 30 ? '#d97706' : '#dc2626';
+        const badges = Object.entries(SIGNALS).map(([k, lbl]) =>
+            '<span class="bv-badge ' + ((r.signals&&r.signals[k]) ? 'y' : 'n') + '">' + lbl + '</span>').join('');
+        const resp = r.success && r.response
+            ? '<div class="bv-response">' + bvEsc(r.response) + (r.response.length>=600?'…':'') + '</div>'
+            : (!r.success ? '<div style="color:#991b1b;font-size:12px;margin-top:6px;">✗ ' + bvEsc(r.error||'') + '</div>' : '');
+        c.innerHTML += '<div class="bv-card"><div class="bv-card-hdr"><div class="bv-card-meta"><div class="bv-card-model">' +
+            bvEsc(r.provider_label) + '</div><div class="bv-card-prompt">' + bvEsc(r.prompt_key) + ': "' +
+            bvEsc((r.prompt||'').substring(0,90)) + (r.prompt&&r.prompt.length>90?'…':'') + '"</div></div>' +
+            '<div class="bv-card-score" style="color:' + clr + '">' + (r.success ? r.score+'/100' : '<span style="font-size:12px;color:#dc2626">ERR</span>') + '</div>' +
+            '</div><div class="bv-badges">' + badges + '</div>' + resp + '</div>';
+    });
+    document.getElementById('bv-cards-wrap').style.display = 'block';
+}
+
+// ── Statistics ───────────────────────────────────────────────────────────────
+function renderStats(stats) {
+    // Summary cards
+    const sc = document.getElementById('bv-stat-cards');
+    if (sc) {
+        sc.innerHTML = [
+            ['Avg Score', Math.round(stats.avg_score) + '/100'],
+            ['Best Score', stats.max_score + '/100'],
+            ['Worst Score', stats.min_score + '/100'],
+            ['Total Runs', stats.total_runs],
+        ].map(([lbl,val]) => '<div class="bv-stat-card"><div class="val">' + val + '</div><div class="lbl">' + lbl + '</div></div>').join('');
+    }
+
+    // Meta
+    const sm = document.getElementById('bv-stats-meta');
+    if (sm) sm.textContent = 'Based on the last ' + stats.total_runs + ' non-cached audit runs.';
+
+    // Trend chart
+    const svg = document.getElementById('bv-trend-svg');
+    if (svg && stats.trend && stats.trend.length > 1) {
+        const pts = stats.trend;
+        const W = 800, H = 140, PAD = 10;
+        const min = 0, max = 100;
+        const xStep = (W - PAD*2) / (pts.length - 1);
+        const toY = v => PAD + (H - PAD*2) * (1 - (v - min) / (max - min));
+        const toX = i => PAD + i * xStep;
+
+        // Area fill
+        let path = 'M' + toX(0) + ',' + toY(pts[0].score);
+        pts.forEach((p, i) => { if (i > 0) path += ' L' + toX(i) + ',' + toY(p.score); });
+        const area = path + ' L' + toX(pts.length-1) + ',' + H + ' L' + toX(0) + ',' + H + ' Z';
+
+        // Grid lines
+        let gridLines = '';
+        [20,40,60,80,100].forEach(v => {
+            const y = toY(v);
+            gridLines += '<line x1="' + PAD + '" y1="' + y + '" x2="' + (W-PAD) + '" y2="' + y +
+                '" stroke="#e3e8ee" stroke-width="1"/><text x="2" y="' + (y+4) + '" font-size="9" fill="#9ca3af">' + v + '</text>';
+        });
+
+        // Dots
+        let dots = '';
+        pts.forEach((p, i) => {
+            const cx = toX(i), cy = toY(p.score);
+            const clr = p.score >= 60 ? '#16a34a' : p.score >= 30 ? '#d97706' : '#dc2626';
+            dots += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + clr + '" stroke="#fff" stroke-width="2">' +
+                '<title>' + p.date + ': ' + p.score + '/100 (' + p.grade + ')</title></circle>';
+        });
+
+        svg.innerHTML = '<defs><linearGradient id="bvGrad" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#3b82f6" stop-opacity=".2"/>' +
+            '<stop offset="100%" stop-color="#3b82f6" stop-opacity=".02"/></linearGradient></defs>' +
+            gridLines +
+            '<path d="' + area + '" fill="url(#bvGrad)"/>' +
+            '<path d="' + path + '" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round"/>' +
+            dots;
+    }
+
+    // Signal averages bars
+    const sa = document.getElementById('bv-sig-avgs');
+    if (sa && stats.signal_averages) {
+        sa.innerHTML = '';
+        Object.entries(SIGNALS).forEach(([k, lbl]) => {
+            const v   = stats.signal_averages[k] ?? 0;
+            const clr = v >= 60 ? '#16a34a' : v >= 30 ? '#d97706' : '#dc2626';
+            sa.innerHTML += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                '<div style="width:150px;font-size:12px;color:#374151;font-weight:500;">' + lbl + '</div>' +
+                '<div style="flex:1;background:#f3f4f6;border-radius:4px;height:16px;overflow:hidden;">' +
+                    '<div style="width:' + Math.min(v,100) + '%;background:' + clr + ';height:100%;border-radius:4px;transition:width .5s;"></div>' +
+                '</div>' +
+                '<div style="width:50px;font-size:12px;font-weight:700;color:' + clr + ';text-align:right;">' + v + '%</div>' +
+            '</div>';
+        });
+    }
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+let histLoaded = false;
+function bvLoadHistory() {
+    if (histLoaded) return;
+    fetch(BV_HIST_URL).then(r => r.json()).then(data => {
+        histLoaded = true;
+        if (!data.success) { document.getElementById('bv-hist-body').innerHTML = '<tr><td colspan="10" style="color:#dc2626;padding:12px;">Error: ' + bvEsc(data.message) + '</td></tr>'; return; }
+        renderHistory(data.history);
+        if (data.statistics) renderStats(data.statistics);
+    }).catch(e => { document.getElementById('bv-hist-body').innerHTML = '<tr><td colspan="10" style="color:#dc2626;padding:12px;">Load failed: ' + bvEsc(e.message) + '</td></tr>'; });
+}
+
+function renderHistory(rows) {
+    const tbody = document.getElementById('bv-hist-body');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:20px;">No audit history yet. Run your first audit to see results here.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const sr = r.signal_rates || {};
+        return '<tr onclick="bvViewDetail(' + r.id + ')" style="cursor:pointer;">' +
+            '<td style="font-size:12px;">' + r.created_at.substring(0,16) + '</td>' +
+            '<td><strong>' + r.overall_score + '/100</strong></td>' +
+            '<td><span class="bv-grade-badge bv-grade-' + (r.grade||'F').toLowerCase() + '">' + bvEsc(r.grade) + '</span></td>' +
+            '<td><span class="bv-trigger ' + bvEsc(r.triggered_by) + '">' + bvEsc(r.triggered_by) + '</span></td>' +
+            '<td>' + r.queries_count + '</td>' +
+            '<td style="color:' + (r.errors_count>0?'#dc2626':'#6b7280') + ';">' + r.errors_count + '</td>' +
+            '<td>' + scoreBar(sr.mentioned  ?? 0) + '</td>' +
+            '<td>' + scoreBar(sr.recommended ?? 0) + '</td>' +
+            '<td>' + scoreBar(sr.url_cited   ?? 0) + '</td>' +
+            '<td style="font-size:12px;color:#2563eb;">▶ View</td>' +
+        '</tr>';
+    }).join('');
+}
+
+function scoreBar(v) {
+    const clr = v >= 60 ? '#16a34a' : v >= 30 ? '#d97706' : '#dc2626';
+    return '<div style="display:flex;align-items:center;gap:5px;">' +
+        '<div style="width:50px;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">' +
+            '<div style="width:' + Math.min(v,100) + '%;height:100%;background:' + clr + ';border-radius:3px;"></div>' +
+        '</div>' +
+        '<span style="font-size:11px;color:' + clr + ';font-weight:700;">' + v + '%</span>' +
+    '</div>';
+}
+
+function bvViewDetail(id) {
+    const detail = document.getElementById('bv-hist-detail');
+    detail.innerHTML = '<div style="color:#6b7280;font-size:13px;">Loading…</div>';
+    detail.style.display = 'block';
+    detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+    fetch(BV_VIEW_URL + '?id=' + id).then(r => r.json()).then(data => {
+        if (!data.success) { detail.innerHTML = '<div style="color:#dc2626;">Error: ' + bvEsc(data.message) + '</div>'; return; }
+        const badges = Object.entries(SIGNALS).map(([k, lbl]) => {
+            const sr = data.signal_rates || {};
+            const v  = sr[k] ?? 0;
+            const clr = v >= 60 ? '#16a34a' : v >= 30 ? '#d97706' : '#dc2626';
+            return '<div style="text-align:center;min-width:90px;"><div style="font-size:18px;font-weight:800;color:' + clr + ';">' + v + '%</div><div style="font-size:11px;color:#6b7280;">' + lbl + '</div></div>';
+        }).join('');
+
+        let cards = '';
+        (data.results||[]).forEach(r => {
+            const clr = (r.score||0) >= 60 ? '#16a34a' : (r.score||0) >= 30 ? '#d97706' : '#dc2626';
+            const bgs = Object.entries(SIGNALS).map(([k,lbl]) =>
+                '<span class="bv-badge ' + ((r.signals&&r.signals[k])?'y':'n') + '">' + lbl + '</span>').join('');
+            cards += '<div class="bv-card" style="margin-top:8px;"><div class="bv-card-hdr">' +
+                '<div class="bv-card-meta"><div class="bv-card-model">' + bvEsc(r.provider_label||r.provider_id) + '</div>' +
+                '<div class="bv-card-prompt">' + bvEsc(r.prompt_key) + '</div></div>' +
+                '<div class="bv-card-score" style="color:' + clr + '">' + (r.error ? 'ERR' : (r.score||0)+'/100') + '</div>' +
+                '</div><div class="bv-badges">' + bgs + '</div>' +
+                (r.raw_response ? '<div class="bv-response">' + bvEsc(r.raw_response.substring(0,400)) + (r.raw_response.length>400?'…':'') + '</div>' : '') +
+            '</div>';
+        });
+
+        detail.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+            '<strong style="font-size:14px;">Audit #' + data.id + ' — ' + data.created_at.substring(0,16) + ' — Score: ' + data.overall_score + '/100 (Grade ' + data.grade + ')</strong>' +
+            '<button class="action-default" onclick="document.getElementById(\'bv-hist-detail\').style.display=\'none\'" style="font-size:12px;">✕ Close</button>' +
+            '</div>' +
+            '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;">' + badges + '</div>' +
+            cards;
+    });
+}
+
+// ── Single tester ─────────────────────────────────────────────────────────────
+function bvTest() {
+    const btn  = document.getElementById('bv-test-btn');
+    const out  = document.getElementById('bv-test-out');
+    const prov = document.getElementById('bv-t-prov').value;
+    const prmp = document.getElementById('bv-t-prompt').value;
+    btn.disabled = true; btn.textContent = 'Querying…';
+    out.innerHTML = '<div style="color:#6b7280;font-size:13px;">Querying ' + prov + '…</div>';
+    out.style.display = 'block';
+
+    fetch(BV_TEST_URL + '?provider=' + encodeURIComponent(prov) + '&prompt_key=' + encodeURIComponent(prmp))
+    .then(r => r.json()).then(d => {
+        if (!d.success) { out.innerHTML = '<div style="color:#dc2626;font-size:13px;">✗ ' + bvEsc(d.message||d.error) + '</div>'; return; }
+        const clr = (d.score||0) >= 60 ? '#16a34a' : (d.score||0) >= 30 ? '#d97706' : '#dc2626';
+        const bgs = Object.entries(SIGNALS).map(([k,lbl]) =>
+            '<span class="bv-badge ' + ((d.signals&&d.signals[k])?'y':'n') + '">' + lbl + '</span>').join('');
+        out.innerHTML = '<div style="margin-bottom:8px;font-size:12px;color:#6b7280;font-style:italic;">"' + bvEsc(d.prompt) + '"</div>' +
+            '<div class="bv-badges" style="margin-bottom:10px;">' + bgs + '</div>' +
+            '<div style="font-size:24px;font-weight:800;color:' + clr + ';margin-bottom:8px;">Score: ' + (d.score||0) + '/100</div>' +
+            '<div class="bv-test-resp">' + bvEsc(d.raw_response||'') + '</div>';
+    }).catch(e => { out.innerHTML = '<div style="color:#dc2626;font-size:13px;">Request failed: ' + bvEsc(e.message) + '</div>'; })
+    .finally(() => { btn.disabled = false; btn.textContent = 'Test'; });
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function bvEsc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Action Plan ──────────────────────────────────────────────────────────────
+const BV_PLAN_URL = '<?= $block->escapeJs($block->getUrl('angeo_brand_vis/plan/index')) ?>';
+let planLoaded = false;
+
+function bvLoadPlan(forceRefresh) {
+    if (planLoaded && !forceRefresh) return;
+    const empty   = document.getElementById('bv-plan-empty');
+    const wrap    = document.getElementById('bv-plan-wrap');
+    const loading = document.getElementById('bv-plan-loading');
+    empty.style.display   = 'none';
+    wrap.style.display    = 'none';
+    loading.style.display = 'block';
+
+    const url = BV_PLAN_URL + (forceRefresh ? '?refresh=1' : '');
+    fetch(url, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'}, body:'form_key=' + encodeURIComponent(BV_FORM_KEY)})
+    .then(r => r.json())
+    .then(data => {
+        loading.style.display = 'none';
+        if (!data.success) { empty.innerHTML = '<div style="color:#dc2626;">' + bvEsc(data.message) + '</div>'; empty.style.display='block'; return; }
+        renderPlan(data.plan);
+        planLoaded = true;
+    })
+    .catch(e => { loading.style.display='none'; empty.innerHTML='<div style="color:#dc2626;">Error: ' + bvEsc(e.message) + '</div>'; empty.style.display='block'; });
+}
+
+function renderPlan(plan) {
+    const wrap = document.getElementById('bv-plan-wrap');
+    const ctx  = plan.brand_context || {};
+    const recs = plan.recommendations || [];
+    const scoreClr = plan.score >= 60 ? '#16a34a' : plan.score >= 30 ? '#d97706' : '#dc2626';
+    const tgtClr   = plan.target_score >= 60 ? '#2563eb' : '#d97706';
+
+    const PRIORITY_COLORS = {critical:'#dc2626',high:'#d97706',medium:'#2563eb',low:'#6b7280'};
+    const EFFORT_LABELS   = {quick_win:'⚡ Quick win',short:'🗓 1–2 weeks',medium:'📅 1–3 months',long:'🔭 3–6 months'};
+    const SIGNAL_LABELS   = {mentioned:'Mentioned',recommended:'Recommended',url_cited:'URL Cited',first_result:'1st Position',positive_sentiment:'Positive Tone'};
+
+    // Header
+    let html = '<div class="bv-box">' +
+        '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">' +
+            '<div style="flex:1;min-width:240px;">' +
+                '<h3 style="font-size:16px;">🎯 Brand Visibility Action Plan</h3>' +
+                '<div style="font-size:13px;color:#6b7280;margin:4px 0 12px;">' + bvEsc(plan.brand_context.brand_name||'') + ' · ' + bvEsc(plan.brand_context.brand_domain||'') + '</div>' +
+                '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
+                    '<div style="text-align:center;">' +
+                        '<div style="font-size:32px;font-weight:900;color:' + scoreClr + ';">' + plan.score + '</div>' +
+                        '<div style="font-size:11px;color:#6b7280;">Current Score</div>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;font-size:24px;color:#9ca3af;">→</div>' +
+                    '<div style="text-align:center;">' +
+                        '<div style="font-size:32px;font-weight:900;color:' + tgtClr + ';">' + plan.target_score + '</div>' +
+                        '<div style="font-size:11px;color:#6b7280;">Target Score</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="margin-top:10px;padding:8px 12px;background:#eff6ff;border-radius:6px;font-size:13px;color:#1e40af;font-weight:600;">' +
+                    '⏱ Expected timeline: ' + bvEsc(plan.expected_timeline) +
+                '</div>' +
+            '</div>' +
+            '<div style="flex:1;min-width:200px;">' +
+                '<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;">Current Signal Rates</div>' +
+                Object.entries(SIGNAL_LABELS).map(([k,lbl]) => {
+                    const v   = (ctx.signal_rates||{})[k] ?? 0;
+                    const clr = v >= 60 ? '#16a34a' : v >= 30 ? '#d97706' : '#dc2626';
+                    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+                        '<div style="width:130px;font-size:12px;color:#374151;">' + lbl + '</div>' +
+                        '<div style="flex:1;background:#f3f4f6;border-radius:3px;height:10px;">' +
+                            '<div style="width:' + Math.min(v,100) + '%;background:' + clr + ';height:100%;border-radius:3px;"></div>' +
+                        '</div>' +
+                        '<div style="width:40px;font-size:12px;font-weight:700;color:' + clr + ';text-align:right;">' + v + '%</div>' +
+                    '</div>';
+                }).join('') +
+            '</div>' +
+        '</div>' +
+    '</div>';
+
+    // Recommendations
+    if (recs.length === 0) {
+        html += '<div class="bv-box"><div style="color:#16a34a;font-size:14px;font-weight:700;">✓ No critical issues found. Continue monitoring weekly.</div></div>';
+    } else {
+        html += '<div class="bv-box">' +
+            '<h3>' + recs.length + ' Recommended Actions</h3>' +
+            '<p class="bv-sub">Ordered by priority and expected impact. Address critical items first.</p>' +
+            recs.map((r, i) => {
+                const pClr    = PRIORITY_COLORS[r.priority] || '#6b7280';
+                const effort  = EFFORT_LABELS[r.effort]  || r.effort;
+                const howHtml = bvEsc(r.how||'').replace(/\n/g,'<br>');
+                return '<div style="border:1px solid #e3e8ee;border-left:4px solid ' + pClr + ';border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">' +
+                        '<div style="flex:1;">' +
+                            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
+                                '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + pClr + ';color:#fff;">' + (r.priority||'').toUpperCase() + '</span>' +
+                                '<span style="font-size:11px;color:#6b7280;">' + effort + '</span>' +
+                                (r.tool ? '<span style="font-size:11px;background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;">🔧 ' + bvEsc(r.tool) + '</span>' : '') +
+                                '<span style="font-size:11px;color:#16a34a;font-weight:700;">+' + (r.impact||0) + ' pts</span>' +
+                            '</div>' +
+                            '<div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;">' + (i+1) + '. ' + bvEsc(r.title||'') + '</div>' +
+                            '<div style="font-size:13px;color:#374151;margin-bottom:8px;">' + bvEsc(r.problem||'') + '</div>' +
+                            '<div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:4px;">✅ What to do: ' + bvEsc(r.action||'') + '</div>' +
+                            '<details style="margin-top:6px;">' +
+                                '<summary style="font-size:12px;color:#6b7280;cursor:pointer;">📋 Step-by-step instructions</summary>' +
+                                '<div style="font-size:12px;color:#374151;margin-top:8px;padding:10px 12px;background:#f9fafb;border-radius:4px;line-height:1.7;">' + howHtml + '</div>' +
+                            '</details>' +
+                        '</div>' +
+                        '<div style="text-align:center;min-width:80px;">' +
+                            '<div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Timeline</div>' +
+                            '<div style="font-size:12px;font-weight:700;color:#374151;">' + bvEsc(r.timeline||'') + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('') +
+        '</div>';
+    }
+
+    // Refresh button
+    html += '<div class="bv-box">' +
+        '<button class="action-default scalable" onclick="bvLoadPlan(true)">↺ Refresh Plan</button>' +
+        '<span style="font-size:12px;color:#9ca3af;margin-left:12px;">Plan is generated from the latest cached audit result.</span>' +
+    '</div>';
+
+    wrap.innerHTML = html;
+    wrap.style.display = 'block';
+}
+
+// Auto-load history when its tab is first accessed
+document.addEventListener('DOMContentLoaded', () => {
+    // Also pre-load statistics if there's any history
+    fetch(BV_HIST_URL).then(r => r.json()).then(data => {
+        if (data.success && data.statistics && data.statistics.total_runs > 0) {
+            renderStats(data.statistics);
+            renderHistory(data.history || []);
+            histLoaded = true;
+        }
+    }).catch(() => {});
+});
+</script>

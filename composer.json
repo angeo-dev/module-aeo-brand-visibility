@@ -1,0 +1,46 @@
+{
+    "name": "angeo/module-aeo-brand-visibility",
+    "description": "Live AI brand visibility audit for Magento 2. Queries ChatGPT, Claude and Perplexity with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence. Extends angeo/module-aeo-audit via CheckerInterface.",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": "MIT",
+    "keywords": [
+        "magento2", "aeo", "brand visibility", "ai visibility", "chatgpt",
+        "claude", "perplexity", "brand recall", "ai audit", "angeo",
+        "ai engine optimization", "brand monitoring", "ai seo"
+    ],
+    "authors": [{"name": "Ievgenii Gryshkun", "email": "info@angeo.dev"}],
+    "require": {
+        "php": ">=8.2",
+        "ext-curl": "*",
+        "magento/framework": "*",
+        "magento/module-backend": "*",
+        "magento/module-config": "*",
+        "magento/module-store": "*",
+        "angeo/module-aeo-audit": "^2.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.10",
+        "phpunit/phpunit": "^10.0"
+    },
+    "suggest": {
+        "angeo/module-llms-txt": "Improve brand recall by publishing llms.txt.",
+        "angeo/module-openai-description-updater": "Improve product content to increase AI citations."
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Angeo\\AeoBrandVisibility\\": ""
+        },
+        "exclude-from-classmap": [
+            "Test/"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Angeo\\AeoBrandVisibility\\Test\\": "Test/"
+        }
+    }
+}

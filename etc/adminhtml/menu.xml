@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <!-- Root item under Marketing — shared with AeoAudit module -->
+        <add id="Angeo_AeoBrandVisibility::brand_vis_root"
+             title="AEO Brand Visibility" module="Angeo_AeoBrandVisibility"
+             sortOrder="57" parent="Magento_Backend::marketing"
+             resource="Angeo_AeoBrandVisibility::root"/>
+
+        <!-- Brand Visibility section -->
+
+        <add id="Angeo_AeoBrandVisibility::run"
+             title="Run Audit" module="Angeo_AeoBrandVisibility"
+             sortOrder="10" parent="Angeo_AeoBrandVisibility::brand_vis_root"
+             action="angeo_brand_vis/run/index"
+             resource="Angeo_AeoBrandVisibility::run"/>
+
+        <add id="Angeo_AeoBrandVisibility::history"
+             title="Audit History" module="Angeo_AeoBrandVisibility"
+             sortOrder="20" parent="Angeo_AeoBrandVisibility::brand_vis_root"
+             action="angeo_brand_vis/history/index"
+             resource="Angeo_AeoBrandVisibility::run"/>
+
+        <add id="Angeo_AeoBrandVisibility::config"
+             title="Configuration" module="Angeo_AeoBrandVisibility"
+             sortOrder="30" parent="Angeo_AeoBrandVisibility::brand_vis_root"
+             action="adminhtml/system_config/edit/section/angeo_brand_vis"
+             resource="Angeo_AeoBrandVisibility::config"/>
+    </menu>
+</config>

@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Dedicated logger -->
+    <virtualType name="Angeo\AeoBrandVisibility\Logger\Handler" type="Magento\Framework\Logger\Handler\Base">
+        <arguments>
+            <argument name="fileName" xsi:type="string">/var/log/angeo_aeo_brand_visibility.log</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="Angeo\AeoBrandVisibility\Logger\Logger" type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Angeo\AeoBrandVisibility\Service\BrandVisibilityService">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+
+    <type name="Angeo\AeoBrandVisibility\Cron\RunBrandVisibilityAudit">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+
+    <!-- Inject BrandVisibilityChecker into aeo-audit AuditRunner -->
+    <type name="Angeo\AeoAudit\Model\AuditRunner">
+        <arguments>
+            <argument name="checkers" xsi:type="array">
+                <item name="brand_visibility" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Model\Checker\BrandVisibilityChecker
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- UI Grid data provider for History listing -->
+    <virtualType name="Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\Grid\Collection"
+                 type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">angeo_brand_visibility_audit</argument>
+            <argument name="resourceModel" xsi:type="string">Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult</argument>
+            <argument name="identifierName" xsi:type="string">id</argument>
+            <argument name="connectionName" xsi:type="string">default</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="angeo_brand_vis_history_listing_data_source" xsi:type="string">
+                    Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\Grid\Collection
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="angeo_brand_visibility" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Console\Command\RunBrandAuditCommand
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+</config>

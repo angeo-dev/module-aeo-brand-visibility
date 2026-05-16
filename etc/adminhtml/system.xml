@@ -1,0 +1,362 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="angeo_aeo" translate="label" sortOrder="200">
+            <label>Angeo AEO</label>
+        </tab>
+
+        <section id="angeo_brand_vis" translate="label" sortOrder="50"
+                 showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Brand Visibility (AI Models)</label>
+            <tab>angeo_aeo</tab>
+            <resource>Angeo_AeoBrandVisibility::config</resource>
+
+            <!-- ── GENERAL ── -->
+            <group id="general" translate="label" sortOrder="10"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General</label>
+                <field id="enabled" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Brand Visibility Check</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>When enabled, brand visibility is automatically included in every AEO audit run.</comment>
+                </field>
+                <field id="brand_name" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Brand Name</label>
+                    <comment>The exact name AI should recognise. Leave empty to use Magento store name.</comment>
+                </field>
+                <field id="brand_domain" type="text" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Brand Domain</label>
+                    <comment>e.g. mystore.com — detects URL citations in AI responses. Leave empty to auto-detect from store URL.</comment>
+                </field>
+                <field id="brand_keywords" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Brand Aliases / Keywords</label>
+                    <comment>Comma-separated. Alternate names, common misspellings, sub-brands. e.g. "My Store, MyStore, ms.com"</comment>
+                </field>
+                <field id="store_category" type="text" sortOrder="50"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Store Category</label>
+                    <comment>What you sell. Used in category-type prompts. e.g. "outdoor furniture", "electronics", "fashion". Used as {{category}} placeholder.</comment>
+                </field>
+                <field id="top_products" type="textarea" sortOrder="60"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Top Products (for prompts)</label>
+                    <comment>One product per line. Used in product-search prompts as {{products}} placeholder. e.g. "Sony WH-1000XM5, Bose QC45"</comment>
+                </field>
+                <field id="log_enabled" type="select" sortOrder="70"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Detailed Logging</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Logs all prompts and responses to var/log/angeo_aeo_brand_visibility.log</comment>
+                </field>
+                <field id="cache_ttl_hours" type="text" sortOrder="80"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Cache TTL (hours)</label>
+                    <comment>How long to cache results before re-querying. Default: 24. Set 0 to disable cache.</comment>
+                    <validate>validate-number</validate>
+                </field>
+            </group>
+
+            <!-- ── CHATGPT ── -->
+            <group id="chatgpt" translate="label" sortOrder="20"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>ChatGPT (OpenAI)</label>
+                <comment>Knowledge-based recall — tests what GPT knows about your brand from training data.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable ChatGPT</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>OpenAI API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Starts with sk-. Get it at platform.openai.com. Stored encrypted.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Model</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GptModel</source_model>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Output Tokens</label>
+                    <comment>Default: 800. Higher = more detailed responses but slower and more expensive.</comment>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="temperature" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Temperature</label>
+                    <comment>0.0–1.0. Keep low (0.2–0.4) for factual recall. Default: 0.3.</comment>
+                    <validate>validate-number</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="timeout" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Request Timeout (seconds)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
+            <!-- ── CLAUDE ── -->
+            <group id="claude" translate="label" sortOrder="30"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Claude (Anthropic)</label>
+                <comment>Training-data recall — tests what Claude knows from its own training data and knowledge cutoff.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Claude</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Anthropic API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Starts with sk-ant-. Get it at console.anthropic.com. Stored encrypted.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Model</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\ClaudeModel</source_model>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Output Tokens</label>
+                    <comment>Default: 800.</comment>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="timeout" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Request Timeout (seconds)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
+            <!-- ── PERPLEXITY ── -->
+            <group id="perplexity" translate="label" sortOrder="35"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Perplexity</label>
+                <comment>Live web-search recall — tests real-time visibility. Most realistic signal. Recommended.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Perplexity</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Perplexity API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Get it at perplexity.ai/settings/api. Stored encrypted.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Model</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\PerplexityModel</source_model>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Output Tokens</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="timeout" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Request Timeout (seconds)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
+
+            <!-- ── GEMINI ── -->
+            <group id="gemini" translate="label" sortOrder="38"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Gemini (Google AI Studio)</label>
+                <comment>Live search + training. Free tier via Google AI Studio — no card required. Reflects Google AI Overviews visibility.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Gemini</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Google AI Studio API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment><![CDATA[Free key — no card required. Get it at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> → Get API key. Stored encrypted.]]></comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Model</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GeminiModel</source_model>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Output Tokens</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="timeout" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Request Timeout (seconds)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
+
+            <!-- ── GROQ (Free) ── -->
+            <group id="groq" translate="label" sortOrder="39"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Groq (Free — Llama / Mixtral)</label>
+                <comment>Free tier: 30 RPM, 14,400 RPD. No credit card required. Get your API key at console.groq.com.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Groq</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Groq API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Starts with gsk_. Get it free at console.groq.com. Stored encrypted.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Model</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GroqModel</source_model>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Output Tokens</label>
+                    <comment>Default: 800.</comment>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="timeout" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Request Timeout (seconds)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
+            <!-- ── QUERIES ── -->
+            <group id="queries" translate="label" sortOrder="40"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Query Configuration</label>
+                <field id="queries_per_provider" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Queries Per Provider</label>
+                    <comment>Max prompts sent to each AI model per audit run. Default: 3. Total API calls = providers × this number.</comment>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="delay_between_ms" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Delay Between Queries (ms)</label>
+                    <comment>Milliseconds to wait between API calls. Default: 500. Increase if hitting rate limits.</comment>
+                    <validate>validate-number</validate>
+                </field>
+                <field id="system_prompt" type="textarea" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>System Prompt</label>
+                    <comment>Instructions sent as system role to all AI models. Leave empty for built-in default.</comment>
+                </field>
+                <field id="enable_recommendation" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Recommendation Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"What are the best stores for {{category}}?"</comment>
+                </field>
+                <field id="prompt_recommendation" type="textarea" sortOrder="41" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Recommendation Prompt Override</label>
+                    <comment>Leave empty for built-in default. Supports: {{brand}}, {{domain}}, {{category}}, {{products}}</comment>
+                    <depends><field id="enable_recommendation">1</field></depends>
+                </field>
+                <field id="enable_category" type="select" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Category Search Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"Where can I buy {{category}} online?"</comment>
+                </field>
+                <field id="prompt_category" type="textarea" sortOrder="51" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Category Prompt Override</label>
+                    <depends><field id="enable_category">1</field></depends>
+                </field>
+                <field id="enable_brand_direct" type="select" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Brand Direct Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"Tell me about {{brand}} online store."</comment>
+                </field>
+                <field id="prompt_brand_direct" type="textarea" sortOrder="61" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Brand Direct Prompt Override</label>
+                    <depends><field id="enable_brand_direct">1</field></depends>
+                </field>
+                <field id="enable_product_search" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Product Search Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"I'm looking for {{products}} online."</comment>
+                </field>
+                <field id="prompt_product_search" type="textarea" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Product Search Prompt Override</label>
+                    <depends><field id="enable_product_search">1</field></depends>
+                </field>
+                <field id="enable_comparison" type="select" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Comparison Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"Compare {{brand}} with similar stores."</comment>
+                </field>
+                <field id="prompt_comparison" type="textarea" sortOrder="81" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Comparison Prompt Override</label>
+                    <depends><field id="enable_comparison">1</field></depends>
+                </field>
+                <field id="enable_gift_guide" type="select" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Gift Guide Prompt</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>"Gift ideas for someone who likes {{category}}."</comment>
+                </field>
+                <field id="prompt_gift_guide" type="textarea" sortOrder="91" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Gift Guide Prompt Override</label>
+                    <depends><field id="enable_gift_guide">1</field></depends>
+                </field>
+                <field id="custom_prompts" type="textarea" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Custom Prompts</label>
+                    <comment>One per line. Format: "key: prompt text". Supports {{brand}}, {{domain}}, {{category}}, {{products}}. These are added on top of built-in prompts (still capped by "Queries Per Provider").</comment>
+                </field>
+            </group>
+
+            <!-- ── SCORING ── -->
+            <group id="scoring" translate="label" sortOrder="50"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Scoring</label>
+                <comment>Each signal contributes weight/totalWeight × 100 to the final score.</comment>
+                <field id="pass_threshold" type="text" sortOrder="5" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Pass Threshold (0–100)</label>
+                    <comment>Score at or above this = PASS in aeo-audit. Default: 60.</comment>
+                    <validate>validate-number</validate>
+                </field>
+                <field id="warn_threshold" type="text" sortOrder="6" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Warn Threshold (0–100)</label>
+                    <comment>Score at or above this (but below Pass) = WARN. Default: 30.</comment>
+                    <validate>validate-number</validate>
+                </field>
+                <field id="weight_mentioned" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Weight: Brand Mentioned</label><validate>validate-number</validate>
+                </field>
+                <field id="weight_recommended" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Weight: Explicitly Recommended</label><validate>validate-number</validate>
+                </field>
+                <field id="weight_url_cited" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Weight: URL / Domain Cited</label><validate>validate-number</validate>
+                </field>
+                <field id="weight_first_result" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Weight: First-Result Position</label><validate>validate-number</validate>
+                </field>
+                <field id="weight_positive_sentiment" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Weight: Positive Sentiment</label><validate>validate-number</validate>
+                </field>
+            </group>
+
+            <!-- ── CRON ── -->
+            <group id="cron" translate="label" sortOrder="60"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Cron Schedule</label>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Automatic Audit</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="schedule" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Cron Expression</label>
+                    <comment>Default: 0 5 * * 1 (every Monday at 05:00). Brand recall changes slowly — weekly is sufficient.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

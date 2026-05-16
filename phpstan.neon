@@ -1,0 +1,36 @@
+parameters:
+    level: 5
+
+    paths:
+        - Console
+        - Controller
+        - Cron
+        - Model
+        - Service
+        - Ui
+
+    excludePaths:
+        - Test
+        - vendor
+
+    phpVersion: 80200
+
+    checkMissingIterableValueType: true
+    checkGenericClassInNonGenericObjectType: true
+
+    ignoreErrors:
+        # Magento DI-generated factories
+        - '#.*Factory.*not found#'
+        - '#.*Collection.*not found#'
+
+        # Magento magic methods on models
+        - '#Call to an undefined method Magento\\Framework\\Model\\AbstractModel#'
+
+        # BrandVisibilityReport value object — dynamic property access
+        - '#Access to an undefined property Angeo\\AeoBrandVisibility\\Model\\Result\\BrandVisibilityReport#'
+
+        # Magento ObjectManager
+        - '#Call to method (get|create) on.*ObjectManager#'
+
+includes:
+    - vendor/phpstan/phpstan-strict-rules/rules.neon

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="angeo_brand_visibility_audit" resource="default" engine="innodb"
+           comment="Angeo Brand Visibility Audit Results">
+
+        <column xsi:type="int"       name="id"             unsigned="true" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="varchar"   name="brand_name"     nullable="false" length="255" default="" comment="Brand Name"/>
+        <column xsi:type="varchar"   name="brand_domain"   nullable="false" length="255" default="" comment="Brand Domain"/>
+        <column xsi:type="smallint"  name="overall_score"  nullable="false" default="0"  comment="Overall Score 0-100"/>
+        <column xsi:type="varchar"   name="grade"          nullable="false" length="1"   default="F" comment="Grade A-F"/>
+        <column xsi:type="text"      name="provider_scores" nullable="true" comment="Provider scores JSON"/>
+        <column xsi:type="text"      name="signal_rates"   nullable="true" comment="Signal rates JSON"/>
+        <column xsi:type="mediumtext" name="results_json"  nullable="true" comment="Full results JSON"/>
+        <column xsi:type="varchar"   name="triggered_by"   nullable="false" length="64" default="admin" comment="Triggered by: admin|cron|cli"/>
+        <column xsi:type="smallint"  name="queries_count"  nullable="false" default="0" comment="Total queries run"/>
+        <column xsi:type="smallint"  name="errors_count"   nullable="false" default="0" comment="Failed queries count"/>
+        <column xsi:type="smallint"  name="from_cache"     nullable="false" default="0" comment="1 if result was served from cache"/>
+        <column xsi:type="datetime"  name="created_at"     nullable="true" comment="Audit timestamp"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+
+        <index referenceId="ANGEO_BRAND_VIS_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+        <index referenceId="ANGEO_BRAND_VIS_OVERALL_SCORE" indexType="btree">
+            <column name="overall_score"/>
+        </index>
+    </table>
+</schema>

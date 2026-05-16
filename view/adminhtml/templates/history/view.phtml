@@ -1,0 +1,156 @@
+<?php
+/** @var \Magento\Backend\Block\Template $block */
+$record = $block->getRequest()->getParam('audit_record');
+if (!$record) { return; }
+
+$signals      = $record->getSignalRatesDecoded();
+$providers    = $record->getProviderScoresDecoded();
+$results      = $record->getResultsDecoded();
+$score        = (int) $record->getOverallScore();
+$grade        = $record->getGrade();
+
+$ringColor = match(true) {
+    $score >= 80 => '#16a34a',
+    $score >= 65 => '#2563eb',
+    $score >= 50 => '#d97706',
+    $score >= 35 => '#ea580c',
+    default      => '#dc2626',
+};
+
+$signalLabels = [
+    'mentioned'          => 'Mentioned',
+    'recommended'        => 'Recommended',
+    'url_cited'          => 'URL Cited',
+    'first_result'       => '1st Position',
+    'positive_sentiment' => 'Positive Tone',
+];
+?>
+<style>
+.bvv { max-width:1000px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:1rem 0; }
+.bvv-back { display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#6b7280;margin-bottom:1.5rem;text-decoration:none; }
+.bvv-back:hover { color:#111; }
+.bvv-box { background:#fff;border:1px solid #e3e8ee;border-radius:10px;padding:20px 24px;margin-bottom:14px; }
+.bvv-box h3 { font-size:14px;font-weight:700;color:#111;margin:0 0 14px; }
+.bvv-hero { display:flex;gap:24px;align-items:center; }
+.bvv-ring { width:90px;height:90px;border-radius:50%;border:6px solid <?= $ringColor ?>;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0; }
+.bvv-ring .sc { font-size:24px;font-weight:900;color:<?= $ringColor ?>; }
+.bvv-ring .gr { font-size:11px;font-weight:600;color:<?= $ringColor ?>;opacity:.8; }
+.bvv-meta { font-size:13px;color:#6b7280;line-height:2; }
+.bvv-meta strong { color:#111; }
+.sig-row { display:flex;align-items:center;gap:12px;margin-bottom:10px; }
+.sig-label { width:160px;font-size:13px;color:#374151;flex-shrink:0; }
+.sig-track { flex:1;height:8px;background:#f3f4f6;border-radius:99px;overflow:hidden; }
+.sig-fill { height:100%;border-radius:99px; }
+.sig-val { width:48px;text-align:right;font-size:13px;font-weight:700; }
+.prov-row { display:flex;justify-content:space-between;align-items:center;
+            padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px; }
+.prov-row:last-child { border-bottom:none; }
+.res-card { border:1px solid #e3e8ee;border-radius:8px;padding:14px 16px;margin-bottom:10px; }
+.res-hdr { display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px; }
+.res-title { font-size:14px;font-weight:700;color:#111; }
+.res-prompt { font-size:12px;color:#6b7280;margin-top:3px;font-style:italic; }
+.res-score { font-size:22px;font-weight:900;flex-shrink:0; }
+.res-badges { display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px; }
+.badge { font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px; }
+.badge-y { background:#dcfce7;color:#166534; }
+.badge-n { background:#fee2e2;color:#991b1b; }
+.res-response { font-size:12px;background:#f9fafb;border:1px solid #e3e8ee;border-radius:6px;
+                padding:10px 12px;max-height:120px;overflow-y:auto;white-space:pre-wrap;
+                line-height:1.6;color:#374151;margin-top:8px; }
+.res-error { font-size:12px;color:#dc2626;background:#fef2f2;border-radius:6px;padding:8px 12px; }
+</style>
+
+<div class="bvv">
+    <a href="<?= $block->escapeUrl($block->getUrl('angeo_brand_vis/history/index')) ?>"
+       class="bvv-back">← Back to History</a>
+
+    <!-- Hero -->
+    <div class="bvv-box">
+        <div class="bvv-hero">
+            <div class="bvv-ring">
+                <span class="sc"><?= (int)$score ?></span>
+                <span class="gr">Grade <?= $block->escapeHtml($grade) ?></span>
+            </div>
+            <div class="bvv-meta">
+                <div><strong>Brand:</strong> <?= $block->escapeHtml($record->getBrandName()) ?></div>
+                <div><strong>Domain:</strong> <?= $block->escapeHtml($record->getBrandDomain()) ?></div>
+                <div><strong>Date:</strong> <?= $block->escapeHtml($record->getCreatedAt()) ?></div>
+                <div><strong>Triggered by:</strong> <?= $block->escapeHtml($record->getTriggeredBy()) ?></div>
+                <div><strong>Queries:</strong> <?= (int)$record->getQueriesCount() ?> total,
+                    <?= (int)$record->getErrorsCount() ?> errors</div>
+                <div><strong>Cache:</strong> <?= $record->getFromCache() ? 'Served from cache' : 'Live queries' ?></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signal rates -->
+    <?php if (!empty($signals)): ?>
+    <div class="bvv-box">
+        <h3>Signal Rates</h3>
+        <?php foreach ($signalLabels as $key => $label):
+            $rate = (float)($signals[$key] ?? 0);
+            $color = $rate >= 60 ? '#16a34a' : ($rate >= 30 ? '#d97706' : '#dc2626');
+        ?>
+        <div class="sig-row">
+            <span class="sig-label"><?= $block->escapeHtml($label) ?></span>
+            <div class="sig-track">
+                <div class="sig-fill" style="width:<?= min(100,$rate) ?>%;background:<?= $color ?>"></div>
+            </div>
+            <span class="sig-val" style="color:<?= $color ?>"><?= number_format($rate,0) ?>%</span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Provider scores -->
+    <?php if (!empty($providers)): ?>
+    <div class="bvv-box">
+        <h3>Score by Provider</h3>
+        <?php foreach ($providers as $pid => $pscore): ?>
+        <div class="prov-row">
+            <span><?= $block->escapeHtml($pid) ?></span>
+            <strong><?= $pscore !== null ? (int)$pscore . '/100' : 'n/a' ?></strong>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Query results -->
+    <?php if (!empty($results)): ?>
+    <div class="bvv-box">
+        <h3>Query Results (<?= count($results) ?>)</h3>
+        <?php foreach ($results as $r):
+            $rscore = (int)($r['score'] ?? 0);
+            $rc = $rscore >= 60 ? '#16a34a' : ($rscore >= 30 ? '#d97706' : '#dc2626');
+            $sigs = $r['signals'] ?? [];
+            $allSigLabels = ['mentioned'=>'Mentioned','recommended'=>'Recommended',
+                             'url_cited'=>'URL','first_result'=>'1st Pos','positive_sentiment'=>'Positive'];
+        ?>
+        <div class="res-card">
+            <div class="res-hdr">
+                <div>
+                    <div class="res-title"><?= $block->escapeHtml($r['provider_label'] ?? $r['provider_id'] ?? '') ?></div>
+                    <div class="res-prompt"><?= $block->escapeHtml($r['prompt_key'] ?? '') ?></div>
+                </div>
+                <span class="res-score" style="color:<?= $rc ?>"><?= $rscore ?>/100</span>
+            </div>
+            <?php if (empty($r['error'])): ?>
+                <div class="res-badges">
+                    <?php foreach ($allSigLabels as $sk => $sl): ?>
+                    <span class="badge <?= ($sigs[$sk] ?? false) ? 'badge-y' : 'badge-n' ?>">
+                        <?= ($sigs[$sk] ?? false) ? '✓' : '✗' ?> <?= $block->escapeHtml($sl) ?>
+                    </span>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (!empty($r['raw_response'])): ?>
+                <div class="res-response"><?= $block->escapeHtml(mb_substr($r['raw_response'], 0, 800)) ?></div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="res-error">Error: <?= $block->escapeHtml($r['error']) ?></div>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+</div>
