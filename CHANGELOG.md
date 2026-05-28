@@ -5,6 +5,37 @@ All notable changes to `angeo/module-aeo-brand-visibility` will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-05-28
+
+### Changed — documentation only (no code changes)
+
+`angeo/module-aeo-audit` v3.0.0 final release ships with **15 built-in
+signals**, not the 16 referenced in this module's v1.1.0 README. The
+`ai_bot_traffic` checker was removed from aeo-audit during pre-release
+security review (it encouraged broad read access on `/var/log/nginx/`,
+didn't work on Cloud/containerised hosting, and was dominated by false
+positives behind edge caches — see aeo-audit CHANGELOG "Considered and
+rejected" for the full rationale).
+
+This patch release synchronises documentation with the published aeo-audit
+v3.0.0 counts:
+
+- README: "17th signal alongside the 16 built-in ones" →
+  "16th signal alongside the 15 built-in ones"
+- README CLI examples: "Full 17-signal audit" → "Full 16-signal audit";
+  "16 built-in technical checks" → "15 built-in technical checks"
+- README CLI examples: "Run only live signals (this checker + AI bot
+  traffic)" → "Run only live signals (this checker — `live_signal`
+  category is reserved for third-party live checks)"
+- README Related modules: "16-signal CLI audit" → "15-signal CLI audit"
+- README How-to-improve: "8-signal technical AEO audit" (stale since v2) →
+  "15-signal technical AEO audit"
+
+**No behaviour change.** `BrandVisibilityChecker` continues to register
+under `CheckerInterface::CATEGORY_LIVE_SIGNAL` (still a valid constant
+in aeo-audit v3.0.0), and aeo-audit's documentation explicitly reserves
+that category for this module. Upgrading from 1.1.0 → 1.1.1 is risk-free.
+
 ## [1.1.0] — 2026-05-22
 
 ### Compatibility — required for `angeo/module-aeo-audit` v3.0+

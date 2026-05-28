@@ -1,8 +1,7 @@
 {
     "name": "angeo/module-aeo-brand-visibility",
-    "description": "Live AI brand visibility audit for Magento 2. Queries ChatGPT, Claude, Perplexity, Gemini and Groq with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence. Extends angeo/module-aeo-audit v3 via CheckerInterface as the 17th built-in signal.",
+    "description": "Live AI brand visibility audit for Magento 2. Queries ChatGPT, Claude, Perplexity, Gemini and Groq with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence. Extends angeo/module-aeo-audit v3 via CheckerInterface as the 16th signal, alongside the 15 built-in technical checks.",
     "type": "magento2-module",
-    "version": "1.1.0",
     "license": "MIT",
     "keywords": [
         "magento2", "aeo", "brand visibility", "ai visibility", "chatgpt",

@@ -401,7 +401,7 @@ query_score = (2.0 + 1.5 + 1.0 + 0.5) / (2.0 + 1.5 + 1.5 + 1.0 + 0.5) * 100
 | Not 1st position | Competitors have stronger AI presence | Increase external mentions: guest posts, Packagist downloads, GitHub stars |
 | Negative sentiment | Poor reviews or negative coverage | Address public feedback; ensure AI-crawlable content is positive |
 
-Run `bin/magento angeo:aeo:audit` for a full 8-signal technical AEO audit to identify and fix the infrastructure issues that block AI indexing.
+Run `bin/magento angeo:aeo:audit` for a full 15-signal technical AEO audit to identify and fix the infrastructure issues that block AI indexing.
 
 ---
 
@@ -409,16 +409,16 @@ Run `bin/magento angeo:aeo:audit` for a full 8-signal technical AEO audit to ide
 
 When `angeo/module-aeo-audit` v3.0+ is installed (required dependency), this
 module adds a `brand_visibility` checker to the AEO audit pipeline as the
-**17th signal** alongside the 16 built-in ones.
+**16th signal** alongside the 15 built-in ones.
 
 ```bash
-# Full 17-signal audit including brand visibility
+# Full 16-signal audit including brand visibility
 bin/magento angeo:aeo:audit
 
-# Skip brand visibility (saves API calls) — runs only the 16 built-in technical checks
+# Skip brand visibility (saves API calls) — runs only the 15 built-in technical checks
 bin/magento angeo:aeo:audit --category=technical,feed
 
-# Run only live signals (this checker + AI bot traffic)
+# Run only live signals (this checker — live_signal category is reserved for third-party live checks)
 bin/magento angeo:aeo:audit --category=live_signal
 ```
 
@@ -451,7 +451,7 @@ helpers + result factory methods for free.
 
 | Module | Purpose |
 |---|---|
-| [`angeo/module-aeo-audit`](https://packagist.org/packages/angeo/module-aeo-audit) | 16-signal CLI audit — robots/llms/schema/UCP/feeds/etc. |
+| [`angeo/module-aeo-audit`](https://packagist.org/packages/angeo/module-aeo-audit) | 15-signal CLI audit — robots/llms/schema/UCP/feeds/etc. |
 | [`angeo/module-llms-txt`](https://packagist.org/packages/angeo/module-llms-txt) | Auto-generates llms.txt and llms.jsonl |
 | [`angeo/module-rich-data`](https://packagist.org/packages/angeo/module-rich-data) | Product, Organization, FAQPage JSON-LD schema |
 | [`angeo/module-openai-product-feed`](https://packagist.org/packages/angeo/module-openai-product-feed) | ChatGPT Shopping product feed |
