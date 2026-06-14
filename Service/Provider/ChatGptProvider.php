@@ -6,12 +6,18 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Magento\Framework\Serialize\SerializerInterface;
 
 class ChatGptProvider extends AbstractHttpProvider implements AiProviderInterface
 {
     private const URL = 'https://api.openai.com/v1/chat/completions';
 
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        SerializerInterface $serializer
+    ) {
+        parent::__construct($serializer);
+    }
 
     public function getProviderId(): string    { return 'chatgpt'; }
     public function getProviderLabel(): string { return 'ChatGPT (' . $this->config->getGptModel() . ')'; }

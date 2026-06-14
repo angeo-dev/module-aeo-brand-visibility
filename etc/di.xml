@@ -28,6 +28,33 @@
         </arguments>
     </type>
 
+    <!-- Route module logging in AJAX controllers to the dedicated log file -->
+    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Run\Index">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Plan\Index">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Query\Single">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\History\Data">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\History\ViewData">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+
     <!-- Inject BrandVisibilityChecker into aeo-audit AuditRunner -->
     <type name="Angeo\AeoAudit\Model\AuditRunner">
         <arguments>

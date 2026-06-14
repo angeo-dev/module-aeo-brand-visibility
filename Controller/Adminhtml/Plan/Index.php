@@ -10,6 +10,7 @@ use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\View\Result\PageFactory;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
 use Angeo\AeoBrandVisibility\Service\RecommendationEngine;
+use Psr\Log\LoggerInterface;
 
 class Index extends Action implements HttpGetActionInterface, HttpPostActionInterface
 {
@@ -20,7 +21,8 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         private readonly JsonFactory $jsonFactory,
         private readonly PageFactory $pageFactory,
         private readonly BrandVisibilityService $service,
-        private readonly RecommendationEngine $engine
+        private readonly RecommendationEngine $engine,
+        private readonly LoggerInterface $logger
     ) {
         parent::__construct($context);
     }
@@ -40,7 +42,11 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
             $plan   = $this->engine->buildPlan($report);
             $result->setData(['success' => true, 'plan' => $plan]);
         } catch (\Throwable $e) {
-            $result->setData(['success' => false, 'message' => $e->getMessage()]);
+            $this->logger->error('[BrandVis] Action plan failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            $result->setData([
+                'success' => false,
+                'message' => (string) __('Action plan could not be generated. See the Brand Visibility log for details.'),
+            ]);
         }
         return $result;
     }

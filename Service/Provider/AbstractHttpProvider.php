@@ -4,12 +4,24 @@ declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Service\Provider;
 
+use Magento\Framework\Serialize\SerializerInterface;
+
 /**
- * Shared HTTP transport for AI provider implementations.
- * Eliminates the identical post() method that existed in all three providers.
+ * Shared HTTPS transport for AI provider implementations.
+ * Eliminates the identical post() method that existed in every provider.
+ *
+ * Hardening:
+ *   - HTTPS-only (CURLOPT_PROTOCOLS / CURLOPT_REDIR_PROTOCOLS)
+ *   - redirects disabled (no blind Location following → SSRF guard)
+ *   - explicit connect timeout
+ *   - request/response (de)serialisation via Magento SerializerInterface
  */
 abstract class AbstractHttpProvider
 {
+    public function __construct(private readonly SerializerInterface $serializer)
+    {
+    }
+
     /**
      * @param  array<string, mixed> $payload
      * @param  string[]             $headers
@@ -22,8 +34,12 @@ abstract class AbstractHttpProvider
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_POSTFIELDS     => $this->serializer->serialize($payload),
             CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_CONNECTTIMEOUT => min($timeout, 15),
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
         ]);
         $body = curl_exec($ch);
@@ -35,7 +51,7 @@ abstract class AbstractHttpProvider
             throw new \RuntimeException(sprintf('[%s] cURL error: %s', $this->getProviderId(), $err));
         }
 
-        $decoded = json_decode((string) $body, true) ?? [];
+        $decoded = $this->decode((string) $body);
 
         if ($code !== 200) {
             $msg = $this->extractErrorMessage($decoded, (string) $body);
@@ -43,6 +59,24 @@ abstract class AbstractHttpProvider
         }
 
         return $decoded;
+    }
+
+    /**
+     * Safe JSON decode via Magento serializer. Returns [] on empty or malformed body.
+     *
+     * @return array<string, mixed>
+     */
+    private function decode(string $body): array
+    {
+        if ($body === '') {
+            return [];
+        }
+        try {
+            $decoded = $this->serializer->unserialize($body);
+            return is_array($decoded) ? $decoded : [];
+        } catch (\InvalidArgumentException) {
+            return [];
+        }
     }
 
     /**

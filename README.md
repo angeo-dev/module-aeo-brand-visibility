@@ -460,6 +460,35 @@ helpers + result factory methods for free.
 
 ---
 
+## Security &amp; data handling
+
+This module talks to external AI APIs and renders their responses in the admin
+panel, so it follows defensive defaults:
+
+- **API keys** for every provider (ChatGPT, Claude, Perplexity, Gemini, Groq)
+  are stored with Magento's `Magento\Config\Model\Config\Backend\Encrypted`
+  backend model and rendered as `obscure` fields. They are never written to
+  logs. The Gemini key is sent in the `x-goog-api-key` request header rather
+  than the URL query string, so it cannot leak into proxy or access logs.
+- **Outbound HTTP** is HTTPS-only and does not follow redirects
+  (`CURLOPT_PROTOCOLS`/`CURLOPT_REDIR_PROTOCOLS` pinned to HTTPS,
+  `CURLOPT_FOLLOWLOCATION` disabled), with an explicit connect timeout.
+- **Admin AJAX endpoints** are protected by ACL
+  (`Angeo_AeoBrandVisibility::run`) and Magento's form key; mutating actions
+  are POST-only. Unexpected exceptions are logged to the module log and only a
+  generic message is returned to the browser.
+- **Output escaping**: server-rendered templates use `escapeHtml`/`escapeUrl`,
+  and the JS that injects AI-provider text into the admin UI routes every
+  untrusted value through a strict HTML/attribute escaper before insertion.
+- **Serialization** uses Magento's `SerializerInterface` throughout (no native
+  `json_encode`/`json_decode` and no PHP `serialize()` of untrusted data),
+  avoiding object-injection surfaces.
+- **Log contents**: when *Enable Logging* is on, truncated prompt and response
+  previews are written to `var/log/angeo_aeo_brand_visibility.log`. Keep logging
+  off in production if your prompts may contain sensitive data.
+
+---
+
 ## License
 
 MIT — free to use, modify, and distribute.

@@ -5,6 +5,56 @@ All notable changes to `angeo/module-aeo-brand-visibility` will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-06-12
+
+Security hardening and code-quality release. No database or configuration
+changes — upgrading from 1.1.x is drop-in (`composer update`, then
+`bin/magento setup:upgrade && bin/magento setup:di:compile`).
+
+### Security
+
+- **Admin UI XSS hardening.** The JavaScript escaper used when injecting
+  AI-provider responses into the Run/History/Single-Test panels now escapes
+  single quotes, backticks and slashes in addition to `& < > "`, making it safe
+  for both HTML-text and quoted-attribute contexts. All untrusted provider text
+  (raw responses, prompts, labels) is routed through it.
+- **Gemini API key moved out of the URL.** The key is now sent in the
+  `x-goog-api-key` header instead of the `?key=` query parameter, so it can no
+  longer appear in proxy logs, access logs or error messages.
+- **Outbound HTTP locked down.** The shared provider transport is now HTTPS-only
+  (`CURLOPT_PROTOCOLS` / `CURLOPT_REDIR_PROTOCOLS`), no longer follows redirects
+  (`CURLOPT_FOLLOWLOCATION` disabled — SSRF guard), and sets an explicit
+  `CURLOPT_CONNECTTIMEOUT`.
+- **No exception detail leaks to the browser.** Admin AJAX controllers
+  (`Run`, `Plan`, `History/Data`, `History/ViewData`) now log the full
+  exception to the dedicated module log and return a generic message. The
+  single-query diagnostic tool still surfaces the provider message (it is a
+  manual debugging aid and no longer key-bearing).
+
+### Changed
+
+- **All (de)serialization goes through Magento `SerializerInterface`.** Replaced
+  every native `json_encode` / `json_decode` call (provider transport, audit
+  result model, history grid column, CLI `--format=json`) with the injected
+  serializer. The main service and repository now depend on the interface
+  rather than the concrete `Json` class.
+- **Cache invalidation fixed.** The audit cache key now includes the set of
+  enabled providers, their configured models and the system prompt, so toggling
+  a provider or switching a model no longer serves a stale report.
+- **`Cache Results (hours) = 0` now truly disables caching.** Previously the
+  `0` value was swallowed and silently treated as 24h.
+- **Provider list corrected in the CLI.** Command description and the
+  `--provider` option help now list all five providers
+  (`chatgpt|claude|perplexity|gemini|groq`).
+
+### Tests
+
+- `BrandVisibilityServiceTest` rewritten against the real service contract
+  (Magento `CacheInterface`, real method names and constructor signature, real
+  serializer) covering guard clauses, cache hits, force-refresh and save-failure
+  resilience.
+- `GroqProviderTest` updated for the new serializer-aware constructor.
+
 ## [1.1.1] — 2026-05-28
 
 ### Changed — documentation only (no code changes)

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Angeo\AeoBrandVisibility\Service\Provider;
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Magento\Framework\Serialize\SerializerInterface;
 
 /**
  * Groq AI provider — OpenAI-compatible API.
@@ -13,7 +14,12 @@ class GroqProvider extends AbstractHttpProvider implements AiProviderInterface
 {
     private const URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        SerializerInterface $serializer
+    ) {
+        parent::__construct($serializer);
+    }
 
     public function getProviderId(): string    { return 'groq'; }
     public function getProviderLabel(): string { return 'Groq (' . $this->config->getGroqModel() . ')'; }

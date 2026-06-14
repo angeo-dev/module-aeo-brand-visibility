@@ -7,6 +7,7 @@ use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
+use Psr\Log\LoggerInterface;
 
 class Data extends Action implements HttpGetActionInterface
 {
@@ -15,7 +16,8 @@ class Data extends Action implements HttpGetActionInterface
     public function __construct(
         Context $context,
         private readonly JsonFactory $jsonFactory,
-        private readonly AuditResultRepository $repository
+        private readonly AuditResultRepository $repository,
+        private readonly LoggerInterface $logger
     ) {
         parent::__construct($context);
     }
@@ -43,7 +45,11 @@ class Data extends Action implements HttpGetActionInterface
             }
             $result->setData(['success' => true, 'history' => $rows, 'statistics' => $stats]);
         } catch (\Throwable $e) {
-            $result->setData(['success' => false, 'message' => $e->getMessage()]);
+            $this->logger->error('[BrandVis] History load failed', ['error' => $e->getMessage()]);
+            $result->setData([
+                'success' => false,
+                'message' => (string) __('History could not be loaded. See the Brand Visibility log for details.'),
+            ]);
         }
         return $result;
     }

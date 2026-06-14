@@ -7,6 +7,7 @@ use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
+use Psr\Log\LoggerInterface;
 
 class ViewData extends Action implements HttpGetActionInterface
 {
@@ -15,7 +16,8 @@ class ViewData extends Action implements HttpGetActionInterface
     public function __construct(
         Context $context,
         private readonly JsonFactory $jsonFactory,
-        private readonly AuditResultRepository $repository
+        private readonly AuditResultRepository $repository,
+        private readonly LoggerInterface $logger
     ) {
         parent::__construct($context);
     }
@@ -41,7 +43,11 @@ class ViewData extends Action implements HttpGetActionInterface
                 'results'         => $row->getResultsDecoded(),
             ]);
         } catch (\Throwable $e) {
-            $result->setData(['success' => false, 'message' => $e->getMessage()]);
+            $this->logger->error('[BrandVis] Audit detail load failed', ['id' => $id, 'error' => $e->getMessage()]);
+            $result->setData([
+                'success' => false,
+                'message' => (string) __('Audit detail could not be loaded. See the Brand Visibility log for details.'),
+            ]);
         }
         return $result;
     }

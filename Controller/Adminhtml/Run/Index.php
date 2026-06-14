@@ -10,6 +10,7 @@ use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\View\Result\PageFactory;
 use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
+use Psr\Log\LoggerInterface;
 
 class Index extends Action implements HttpGetActionInterface, HttpPostActionInterface
 {
@@ -20,7 +21,8 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         private readonly JsonFactory $jsonFactory,
         private readonly PageFactory $pageFactory,
         private readonly BrandVisibilityService $service,
-        private readonly AuditResultRepository $repository
+        private readonly AuditResultRepository $repository,
+        private readonly LoggerInterface $logger
     ) {
         parent::__construct($context);
     }
@@ -67,7 +69,11 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
                 'statistics' => $stats,
             ]);
         } catch (\Throwable $e) {
-            $result->setData(['success' => false, 'message' => $e->getMessage()]);
+            $this->logger->error('[BrandVis] Run audit failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            $result->setData([
+                'success' => false,
+                'message' => (string) __('Audit could not be completed. See the Brand Visibility log for details.'),
+            ]);
         }
         return $result;
     }

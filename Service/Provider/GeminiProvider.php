@@ -6,6 +6,7 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Magento\Framework\Serialize\SerializerInterface;
 
 /**
  * Google Gemini provider via Google AI Studio REST API.
@@ -26,7 +27,12 @@ class GeminiProvider extends AbstractHttpProvider implements AiProviderInterface
 {
     private const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
 
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        SerializerInterface $serializer
+    ) {
+        parent::__construct($serializer);
+    }
 
     public function getProviderId(): string    { return 'gemini'; }
     public function getProviderLabel(): string { return 'Gemini (' . $this->config->getGeminiModel() . ')'; }
@@ -39,7 +45,7 @@ class GeminiProvider extends AbstractHttpProvider implements AiProviderInterface
     public function query(string $systemPrompt, string $userPrompt): string
     {
         $model = $this->config->getGeminiModel();
-        $url   = sprintf(self::BASE_URL, $model) . '?key=' . $this->config->getGeminiApiKey();
+        $url   = sprintf(self::BASE_URL, $model);
 
         $data = $this->post(
             $url,
@@ -58,7 +64,10 @@ class GeminiProvider extends AbstractHttpProvider implements AiProviderInterface
                     'temperature'     => 0.3,
                 ],
             ],
-            ['Content-Type: application/json'],
+            [
+                'Content-Type: application/json',
+                'x-goog-api-key: ' . $this->config->getGeminiApiKey(),
+            ],
             $this->config->getGeminiTimeout()
         );
 

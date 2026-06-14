@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model;
 
-use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\Serialize\SerializerInterface;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult as AuditResultResource;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\Collection;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\CollectionFactory;
@@ -22,7 +22,7 @@ class AuditResultRepository
         private readonly AuditResultFactory  $factory,
         private readonly AuditResultResource $resource,
         private readonly CollectionFactory   $collectionFactory,
-        private readonly Json                $json,
+        private readonly SerializerInterface $json,
     ) {}
 
     // ── Save ──────────────────────────────────────────────────────────────

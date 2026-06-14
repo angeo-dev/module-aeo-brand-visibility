@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
+use Magento\Framework\Serialize\SerializerInterface;
 
 class RunBrandAuditCommand extends Command
 {
@@ -24,7 +25,8 @@ class RunBrandAuditCommand extends Command
 
     public function __construct(
         private readonly Config $config,
-        private readonly BrandVisibilityService $service
+        private readonly BrandVisibilityService $service,
+        private readonly SerializerInterface $serializer
     ) {
         parent::__construct();
     }
@@ -32,9 +34,9 @@ class RunBrandAuditCommand extends Command
     protected function configure(): void
     {
         $this->setName('angeo:aeo:brand-visibility')
-            ->setDescription('[Angeo] Check real AI brand visibility across ChatGPT, Claude and Perplexity')
+            ->setDescription('[Angeo] Check real AI brand visibility across ChatGPT, Claude, Perplexity, Gemini and Groq')
             ->addOption('refresh',  'r', InputOption::VALUE_NONE,     'Force fresh queries, bypass cache')
-            ->addOption('provider', null, InputOption::VALUE_OPTIONAL, 'Test one provider: chatgpt|claude|perplexity')
+            ->addOption('provider', null, InputOption::VALUE_OPTIONAL, 'Test one provider: chatgpt|claude|perplexity|gemini|groq')
             ->addOption('prompt',   null, InputOption::VALUE_OPTIONAL, 'Prompt key: recommendation|category|brand_direct|product_search|comparison|gift_guide')
             ->addOption('format',   null, InputOption::VALUE_OPTIONAL, 'Output format: table|json|markdown', 'table')
             ->addOption('fail-on',  null, InputOption::VALUE_OPTIONAL, 'Exit 1 if overall score below N (0–100)');
@@ -187,7 +189,7 @@ class RunBrandAuditCommand extends Command
 
     private function toJson($report): string
     {
-        return json_encode([
+        return $this->serializer->serialize([
             'brand'              => $report->brandName,
             'domain'             => $report->brandDomain,
             'overall_score'      => $report->getOverallScore(),
@@ -209,7 +211,7 @@ class RunBrandAuditCommand extends Command
                 'signals'    => $r->signals,
                 'error'      => $r->errorMessage,
             ], $report->results),
-        ], JSON_PRETTY_PRINT);
+        ]);
     }
 
     private function toMarkdown($report): string

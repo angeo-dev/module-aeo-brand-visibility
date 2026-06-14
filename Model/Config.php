@@ -155,7 +155,12 @@ class Config
 
     public function getCacheTtlHours(): int
     {
-        return max(0, (int) $this->scopeConfig->getValue(self::XML_CACHE_TTL) ?: 24);
+        $raw = $this->scopeConfig->getValue(self::XML_CACHE_TTL);
+        // Unset → default 24h. An explicit "0" disables caching and must be preserved.
+        if ($raw === null || $raw === '') {
+            return 24;
+        }
+        return max(0, (int) $raw);
     }
 
     // ── ChatGPT ────────────────────────────────────────────────────────────

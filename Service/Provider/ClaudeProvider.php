@@ -6,13 +6,19 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Magento\Framework\Serialize\SerializerInterface;
 
 class ClaudeProvider extends AbstractHttpProvider implements AiProviderInterface
 {
     private const URL     = 'https://api.anthropic.com/v1/messages';
     private const VERSION = '2023-06-01';
 
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        SerializerInterface $serializer
+    ) {
+        parent::__construct($serializer);
+    }
 
     public function getProviderId(): string    { return 'claude'; }
     public function getProviderLabel(): string { return 'Claude (' . $this->config->getClaudeModel() . ')'; }

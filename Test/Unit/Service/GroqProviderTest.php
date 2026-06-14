@@ -6,6 +6,7 @@ namespace Angeo\AeoBrandVisibility\Test\Unit\Service;
 
 use Angeo\AeoBrandVisibility\Model\Config;
 use Angeo\AeoBrandVisibility\Service\Provider\GroqProvider;
+use Magento\Framework\Serialize\SerializerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -19,8 +20,9 @@ class GroqProviderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->config   = $this->createMock(Config::class);
-        $this->provider = new GroqProvider($this->config);
+        $this->config    = $this->createMock(Config::class);
+        $serializer      = $this->createMock(SerializerInterface::class);
+        $this->provider  = new GroqProvider($this->config, $serializer);
     }
 
     public function testGetProviderId(): void

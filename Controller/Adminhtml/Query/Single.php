@@ -6,13 +6,15 @@ use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
+use Psr\Log\LoggerInterface;
 class Single extends Action implements HttpGetActionInterface
 {
     const ADMIN_RESOURCE = 'Angeo_AeoBrandVisibility::run';
     public function __construct(
         Context $context,
         private readonly JsonFactory $jsonFactory,
-        private readonly BrandVisibilityService $service
+        private readonly BrandVisibilityService $service,
+        private readonly LoggerInterface $logger
     ) { parent::__construct($context); }
     public function execute()
     {
@@ -31,7 +33,11 @@ class Single extends Action implements HttpGetActionInterface
                 'error'          => $r->errorMessage,
             ]);
         } catch (\Throwable $e) {
-            $result->setData(['success' => false, 'message' => $e->getMessage()]);
+            $this->logger->error('[BrandVis] Single query failed', ['provider' => $provider, 'error' => $e->getMessage()]);
+            $result->setData([
+                'success' => false,
+                'message' => (string) __('Query failed: %1', $e->getMessage()),
+            ]);
         }
         return $result;
     }

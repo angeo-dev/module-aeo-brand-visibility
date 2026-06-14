@@ -541,8 +541,18 @@ function bvTest() {
 }
 
 // ── Utility ───────────────────────────────────────────────────────────────────
+// Escapes for HTML text AND single/double-quoted attribute contexts. All dynamic
+// values (including untrusted AI responses) are routed through this before being
+// concatenated into innerHTML.
 function bvEsc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/`/g, '&#96;')
+        .replace(/\//g, '&#47;');
 }
 
 // ── Action Plan ──────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Magento\Framework\Serialize\SerializerInterface;
 
 /**
  * Perplexity Sonar provider — uses live web search for real-world brand recall.
@@ -17,7 +18,12 @@ class PerplexityProvider extends AbstractHttpProvider implements AiProviderInter
 {
     private const URL = 'https://api.perplexity.ai/chat/completions';
 
-    public function __construct(private readonly Config $config) {}
+    public function __construct(
+        private readonly Config $config,
+        SerializerInterface $serializer
+    ) {
+        parent::__construct($serializer);
+    }
 
     public function getProviderId(): string    { return 'perplexity'; }
     public function getProviderLabel(): string { return 'Perplexity (' . $this->config->getPerplexityModel() . ')'; }

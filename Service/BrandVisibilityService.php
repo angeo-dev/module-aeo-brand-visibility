@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Angeo\AeoBrandVisibility\Service;
 
 use Magento\Framework\App\CacheInterface as Cache;
-use Magento\Framework\Serialize\Serializer\Json as Json;
+use Magento\Framework\Serialize\SerializerInterface;
 use Psr\Log\LoggerInterface;
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
@@ -40,7 +40,7 @@ class BrandVisibilityService
         private readonly GroqProvider        $groq,
         private readonly ResponseAnalyzer    $analyzer,
         private readonly Cache               $cache,
-        private readonly Json                $json,
+        private readonly SerializerInterface $json,
         private readonly LoggerInterface     $logger,
         private readonly \Angeo\AeoBrandVisibility\Model\AuditResultRepository $repository,
     ) {}
@@ -232,10 +232,19 @@ class BrandVisibilityService
 
     private function cacheKey(): string
     {
+        // Provider labels embed the configured model (e.g. "Claude (claude-sonnet-4-6)"),
+        // so enabling/disabling a provider or switching its model invalidates the cache.
+        $providerSignature = implode(',', array_map(
+            fn($p) => $p->getProviderLabel(),
+            $this->enabledProviders()
+        ));
+
         return self::CACHE_PREFIX . md5(
             $this->config->getBrandName() .
             $this->config->getBrandDomain() .
-            implode(',', array_keys($this->config->getActivePrompts()))
+            implode(',', array_keys($this->config->getActivePrompts())) .
+            $providerSignature .
+            $this->config->getSystemPrompt()
         );
     }
 
