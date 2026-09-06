@@ -19,6 +19,16 @@
     <type name="Angeo\AeoBrandVisibility\Service\BrandVisibilityService">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+            <!-- Provider registry (since 2.0.0). Third-party modules add
+                 providers here by implementing AiProviderInterface — no core
+                 changes needed. Order defines report/UI ordering. -->
+            <argument name="providers" xsi:type="array">
+                <item name="chatgpt"    xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider</item>
+                <item name="claude"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider</item>
+                <item name="perplexity" xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\PerplexityProvider</item>
+                <item name="gemini"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider</item>
+                <item name="groq"       xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GroqProvider</item>
+            </argument>
         </arguments>
     </type>
 

@@ -157,18 +157,24 @@ class BrandVisibilityChecker extends AbstractChecker
         $passThreshold = $this->config->getPassThreshold();
         $warnThreshold = $this->config->getWarnThreshold();
 
+        $sov       = $report->shareOfVoice();
+        $grounding = $report->groundingBreakdown();
+
         $details = [
-            'score'         => $score,
-            'grade'         => $grade,
-            'queries_run'   => $totalQueries,
-            'queries_ok'    => $successful,
-            'rate_mention'  => round($mentionRate, 1),
-            'rate_recommend'=> round($recommendRate, 1),
-            'rate_url'      => round($urlRate, 1),
-            'rate_first'    => round($firstRate, 1),
-            'from_cache'    => $report->fromCache,
-            'pass_at'       => $passThreshold,
-            'warn_at'       => $warnThreshold,
+            'score'          => $score,
+            'grade'          => $grade,
+            'queries_run'    => $totalQueries,
+            'queries_ok'     => $successful,
+            'rate_mention'   => round($mentionRate, 1),
+            'rate_recommend' => round($recommendRate, 1),
+            'rate_url'       => round($urlRate, 1),
+            'rate_first'     => round($firstRate, 1),
+            'from_cache'     => $report->fromCache,
+            'pass_at'        => $passThreshold,
+            'warn_at'        => $warnThreshold,
+            'share_of_voice' => $sov,
+            'grounded_answers' => $grounding['grounded'],
+            'recall_answers'   => $grounding['recall'],
         ];
 
         $recommendation = $this->buildRecommendation($report, $score);
@@ -183,6 +189,22 @@ class BrandVisibilityChecker extends AbstractChecker
     private function buildRecommendation(BrandVisibilityReport $report, int $score): string
     {
         $tips = [];
+
+        // Share of voice: name the competitor that actually outranks the brand.
+        $sov = $report->shareOfVoice();
+        $ownRate = $sov[$report->brandName] ?? 0.0;
+        foreach ($sov as $name => $rate) {
+            if ($name !== $report->brandName && $rate > $ownRate && $rate >= 30) {
+                $tips[] = sprintf(
+                    'AI engines mention "%s" in %.0f%%%% of answers vs your %.0f%%%% — study what content and '
+                    . 'citations earn them that position (reviews, comparison pages, category authority).',
+                    $name,
+                    $rate,
+                    $ownRate
+                );
+                break; // one named competitor is a call to action; a list is noise
+            }
+        }
 
         if ($report->signalRate('mentioned') < 50) {
             $tips[] = 'Your brand is largely unknown to AI models. Publish llms.txt '

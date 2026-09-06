@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Angeo\AeoBrandVisibility\Service\Provider;
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Angeo\AeoBrandVisibility\Model\Result\ProviderResponse;
 use Magento\Framework\Serialize\SerializerInterface;
 
 /**
@@ -29,14 +30,18 @@ class GroqProvider extends AbstractHttpProvider implements AiProviderInterface
         return $this->config->isGroqEnabled() && $this->config->getGroqApiKey() !== '';
     }
 
-    public function query(string $systemPrompt, string $userPrompt): string
+    /** Groq serves open-weight models without web access — training recall only. */
+    public function supportsGrounding(): bool { return false; }
+    public function isGrounded(): bool        { return false; }
+
+    public function query(string $systemPrompt, string $userPrompt): ProviderResponse
     {
         $data = $this->post(
             self::URL,
             [
                 'model'       => $this->config->getGroqModel(),
                 'max_tokens'  => $this->config->getGroqMaxTokens(),
-                'temperature' => 0.3,
+                'temperature' => 0.2,
                 'messages'    => [
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user',   'content' => $userPrompt],
@@ -53,6 +58,6 @@ class GroqProvider extends AbstractHttpProvider implements AiProviderInterface
         if ($content === '') {
             throw new \RuntimeException('Groq: empty response content.');
         }
-        return $content;
+        return new ProviderResponse($content, [], false);
     }
 }

@@ -7,6 +7,7 @@ namespace Angeo\AeoBrandVisibility\Test\Unit\Service;
 use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
 use Angeo\AeoBrandVisibility\Model\Config;
 use Angeo\AeoBrandVisibility\Model\Result\BrandVisibilityReport;
+use Angeo\AeoBrandVisibility\Model\Result\ProviderResponse;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
 use Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider;
 use Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider;
@@ -58,6 +59,7 @@ class BrandVisibilityServiceTest extends TestCase
         $this->config->method('getSystemPrompt')->willReturn('system');
         $this->config->method('isLogEnabled')->willReturn(false);
         $this->config->method('getDelayBetweenQueriesMs')->willReturn(0);
+        $this->config->method('getRepeatsPerPrompt')->willReturn(1);
 
         foreach ([$this->chatGpt, $this->claude, $this->perplexity, $this->gemini] as $p) {
             $p->method('isConfigured')->willReturn(false);
@@ -66,18 +68,15 @@ class BrandVisibilityServiceTest extends TestCase
 
     private function makeService(): BrandVisibilityService
     {
+        // 2.0.0: providers arrive as a di.xml array of AiProviderInterface.
         return new BrandVisibilityService(
             config:     $this->config,
-            chatGpt:    $this->chatGpt,
-            claude:     $this->claude,
-            perplexity: $this->perplexity,
-            gemini:     $this->gemini,
-            groq:       $this->groq,
             analyzer:   $this->analyzer,
             cache:      $this->cache,
             json:       $this->json,
             logger:     $this->logger,
             repository: $this->repository,
+            providers:  [$this->chatGpt, $this->claude, $this->perplexity, $this->gemini, $this->groq],
         );
     }
 
@@ -170,7 +169,9 @@ class BrandVisibilityServiceTest extends TestCase
         $this->groq->method('isConfigured')->willReturn(true);
         $this->groq->method('getProviderId')->willReturn('groq');
         $this->groq->method('getProviderLabel')->willReturn('Groq (llama-3.3-70b-versatile)');
-        $this->groq->method('query')->willReturn('Angeo is a great store at angeo.dev');
+        $this->groq->method('query')->willReturn(
+            new ProviderResponse('Angeo is a great store at angeo.dev', [], false)
+        );
 
         $this->analyzer->method('analyse')->willReturn([
             'signals' => [
@@ -179,8 +180,11 @@ class BrandVisibilityServiceTest extends TestCase
                 'url_cited'          => true,
                 'first_result'       => false,
                 'positive_sentiment' => true,
+                'no_mention'         => false,
             ],
-            'score'   => 70,
+            'score'               => 70,
+            'competitor_mentions' => ['RivalShop' => true],
+            'cited_domains'       => ['angeo.dev', 'rivalshop.com'],
         ]);
     }
 }

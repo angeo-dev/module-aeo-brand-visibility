@@ -5,6 +5,118 @@ All notable changes to `angeo/module-aeo-brand-visibility` will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] — 2026-07-03
+
+The measurement-validity release. Until now 4 of 5 providers measured
+*training recall* — what a model memorised months ago — while the UI implied
+live AI-search visibility. 2.0 closes that gap and adds the competitive
+dimension. **Breaking changes** (see Upgrading below).
+
+### Added
+
+- **Grounded (live web search) mode per provider.** ChatGPT via the Responses
+  API + `web_search` tool, Gemini via Grounding with Google Search, Claude via
+  the server-side `web_search` tool — the same retrieval real users get.
+  Toggle *Live Web Search* under each provider (default OFF; grounded calls
+  cost more and get a longer timeout). Perplexity is always grounded; Groq
+  never is. Each result records which mode produced it, and the report never
+  averages the two silently — `groundingBreakdown()` surfaces the mix.
+- **Share of voice.** A competitor watch-list (*Response Analysis → Competitor
+  Watch-list*, `Name | domain.tld` per line) turns "your score is 40" into
+  "you appear in 20% of answers, competitor X in 80%". The analyzer now
+  extracts every competitor mention and every domain cited in each answer;
+  `BrandVisibilityReport::shareOfVoice()` ranks brand vs competitors, persisted
+  in the new `share_of_voice` column and surfaced in the audit checker.
+- **Structured citations.** Providers return their source URLs as structured
+  data (`ProviderResponse::$citations`) instead of Perplexity smuggling them
+  into the text as a "Sources:" suffix. A citation of your own domain now
+  feeds `url_cited` directly — being a cited source is the strongest
+  visibility outcome, and it is scored as such.
+- **Repeats per prompt (1–5).** LLM answers are stochastic even at low
+  temperature. Sampling each prompt N times and keeping the MEDIAN score /
+  majority-vote signals turns noisy single samples into stable trend points.
+  Default 1 (cost-neutral); 3 recommended for weekly tracking. A failed
+  attempt no longer poisons the rest; all-failed still yields a clean error
+  result.
+- **Pluggable provider registry.** `BrandVisibilityService` now receives an
+  `AiProviderInterface[]` via di.xml. Third-party modules add a provider
+  (Mistral, DeepSeek, a local Ollama, …) with one di.xml `<item>` — no core
+  edits. Ships with the five built-ins wired in `etc/di.xml`.
+
+### Changed
+
+- **`AiProviderInterface` (BC break).** `query()` now returns a
+  `ProviderResponse` (text + citations + grounded) instead of a bare string,
+  and adds `supportsGrounding()` / `isGrounded()`. Any custom provider must be
+  updated.
+- **`BrandVisibilityService` constructor (BC break).** The five concrete
+  provider arguments are replaced by a single `providers` array (injected via
+  di.xml). Custom instantiation must pass the array.
+- **Cache namespace bumped** to `angeo_bv2_` — the 2.0 payload shape must not
+  hydrate from 1.x cache entries. Old entries expire naturally; no action
+  needed.
+
+### Database
+
+- New nullable `share_of_voice` column on `angeo_brand_visibility_audit`
+  (declarative schema — applied by `setup:upgrade`). No data migration.
+
+### Upgrading from 1.3.x
+
+1. `composer require angeo/module-aeo-brand-visibility:^2.0`
+2. `bin/magento setup:upgrade && bin/magento setup:di:compile`
+3. If you wrote a **custom AiProviderInterface** implementation, update it to
+   return `ProviderResponse` and implement the two new methods.
+4. If you **instantiate `BrandVisibilityService` yourself** (not via DI),
+   pass providers as the `providers` array argument.
+5. Optional: add competitors under *Response Analysis*, enable *Live Web
+   Search* per provider, and set *Repeats Per Prompt* to 3 for stable trends.
+
+## [1.3.0] — 2026-07-02
+
+Release hygiene + the multilingual analyzer. Drop-in upgrade from 1.2.x
+(`composer update`, `setup:upgrade`, `setup:di:compile`) — no DB changes;
+one config field renamed with a read fallback, saved values survive.
+
+### Added
+
+- **Multilingual response analysis.** Recommendation and sentiment phrases
+  now come from per-language packs — English, Dutch, German, French and
+  Ukrainian (`Service/Analysis/PhrasePack`). AI assistants answer in the
+  shopper's language; before this release a Dutch "zeker aan te raden" or a
+  German "sehr empfehlenswert" scored `recommended = false`. Languages are
+  selectable under *Response Analysis → Analysis Languages* (empty = all
+  packs, the safe default). Adding a language is one array in PhrasePack.
+- **`{{language}}` prompt placeholder** plus a *Query Language* config field
+  — probe AI models in the language of your market, not just English.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`): phpcs, PHPStan, PHPUnit
+  on PHP 8.2/8.3/8.4, and a Mage-OS mirror installability job. The
+  aeo-audit dependency resolves from GitHub until new tags reach Packagist.
+- **`i18n/en_US.csv`** — base translation dictionary (46 admin strings).
+
+### Changed
+
+- **Unicode word-boundary brand matching.** Brand name and keywords are now
+  matched as whole words (`(?<![\p{L}\p{N}]) … (?![\p{L}\p{N}])`), so the
+  brand "Geo" no longer matches inside "geography" and short keywords stop
+  firing on unrelated words. Domain matching intentionally remains
+  substring-based (domains are distinctive and live inside URLs).
+- **Deterministic provider temperatures.** Claude now sends an explicit
+  `temperature: 0.2` (previously unset → provider default ≈ 1.0); Gemini and
+  Groq aligned from 0.3 to 0.2. Visibility measurement needs the model's
+  most probable answer — creative variance was score jitter between runs.
+- **"Queries Per Provider" renamed to "Max Prompts Per Provider"** — the old
+  name described the cap incorrectly (it limits prompts; total queries =
+  prompts × providers). Values saved under the legacy path are still read.
+- `angeo/module-aeo-audit` constraint widened to `^3.0||^4.0` — compatible
+  with the aeo-audit 4.0.0 evidence-layer release.
+
+### Fixed
+
+- `GroqProviderTest::testIsConfiguredWithApiKey` never mocked the enabled
+  flag and silently failed — it had never actually run (no CI existed).
+  Fixed; full suite green (63 tests).
+
 ## [1.2.0] — 2026-06-12
 
 Security hardening and code-quality release. No database or configuration

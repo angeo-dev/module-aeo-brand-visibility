@@ -79,7 +79,12 @@
                 <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GptModel</source_model>
-                    <depends><field id="enabled">1</field></depends>
+                    <depends><field id="enabled">1</field>
+                <field id="grounded" type="select" sortOrder="25" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Live Web Search (grounded)</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Query via the Responses API with the web_search tool — measures what real ChatGPT users see, not training-data memory. Higher cost per call.</comment>
+                </field></depends>
                 </field>
                 <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Max Output Tokens</label>
@@ -118,7 +123,12 @@
                 <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\ClaudeModel</source_model>
-                    <depends><field id="enabled">1</field></depends>
+                    <depends><field id="enabled">1</field>
+                <field id="grounded" type="select" sortOrder="25" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Live Web Search (grounded)</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable the Claude web search tool — measures live search visibility instead of training recall. Higher cost per call.</comment>
+                </field></depends>
                 </field>
                 <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Max Output Tokens</label>
@@ -184,7 +194,12 @@
                 <field id="model" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GeminiModel</source_model>
-                    <depends><field id="enabled">1</field></depends>
+                    <depends><field id="enabled">1</field>
+                <field id="grounded" type="select" sortOrder="25" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Live Web Search (grounded)</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable Grounding with Google Search — the retrieval Gemini consumer surfaces use. Higher cost per call.</comment>
+                </field></depends>
                 </field>
                 <field id="max_tokens" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Max Output Tokens</label>
@@ -236,10 +251,19 @@
             <group id="queries" translate="label" sortOrder="40"
                    showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Query Configuration</label>
-                <field id="queries_per_provider" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Queries Per Provider</label>
-                    <comment>Max prompts sent to each AI model per audit run. Default: 3. Total API calls = providers × this number.</comment>
+                <field id="max_prompts_per_provider" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Max Prompts Per Provider</label>
+                    <comment>How many prompts each AI model receives per audit run. Default: 3. Total API calls = providers × this number. (Renamed in 1.3.0 from "Queries Per Provider" — values saved under the old field are still honoured.)</comment>
                     <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="repeats_per_prompt" type="text" sortOrder="12" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Repeats Per Prompt</label>
+                    <comment>How many times each prompt is sampled per provider (1–5). The report keeps the MEDIAN score and majority signals — LLM answers are stochastic, and the median of 3 is a far stabler trend point than a single sample. Default 1 (no extra cost); 3 recommended for weekly trend tracking. Multiplies API calls.</comment>
+                    <validate>validate-digits validate-digits-range digits-range-1-5</validate>
+                </field>
+                <field id="query_language" type="text" sortOrder="15" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Query Language</label>
+                    <comment>Value for the {{language}} placeholder in prompt templates (e.g. "Dutch", "German"). Shoppers ask AI assistants in their own language — probe in the language of your market. Default: English.</comment>
                 </field>
                 <field id="delay_between_ms" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Delay Between Queries (ms)</label>
@@ -308,6 +332,23 @@
                 <field id="custom_prompts" type="textarea" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Custom Prompts</label>
                     <comment>One per line. Format: "key: prompt text". Supports {{brand}}, {{domain}}, {{category}}, {{products}}. These are added on top of built-in prompts (still capped by "Queries Per Provider").</comment>
+                </field>
+            </group>
+
+            <!-- ── ANALYSIS (since 1.3.0) ── -->
+            <group id="analysis" translate="label comment" sortOrder="45"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Response Analysis</label>
+                <comment>How AI responses are scanned for brand signals.</comment>
+                <field id="languages" type="multiselect" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Analysis Languages</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\AnalysisLanguage</source_model>
+                    <comment>Phrase packs used to detect recommendations and sentiment in AI answers. Leave empty to use all shipped languages (safe default). AI assistants reply in the shopper's language — make sure your market's language is covered.</comment>
+                    <can_be_empty>1</can_be_empty>
+                </field>
+                <field id="competitors" type="textarea" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Competitor Watch-list (Share of Voice)</label>
+                    <comment><![CDATA[One competitor per line: <code>Name | domain.tld</code>, or a bare name, or a bare domain. Every answer to "what are the best stores?" names the competition — the report shows how often each watched competitor appears next to you, which turns an abstract score into "who exactly is outranking us".]]></comment>
                 </field>
             </group>
 

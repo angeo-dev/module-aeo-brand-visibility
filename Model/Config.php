@@ -34,6 +34,7 @@ class Config
     private const XML_GPT_MAX_TOKENS   = 'angeo_brand_vis/chatgpt/max_tokens';
     private const XML_GPT_TEMPERATURE  = 'angeo_brand_vis/chatgpt/temperature';
     private const XML_GPT_TIMEOUT      = 'angeo_brand_vis/chatgpt/timeout';
+    private const XML_GPT_GROUNDED     = 'angeo_brand_vis/chatgpt/grounded';
 
     // ── Claude ─────────────────────────────────────────────────────────────
     private const XML_CLAUDE_ENABLED   = 'angeo_brand_vis/claude/enabled';
@@ -41,6 +42,7 @@ class Config
     private const XML_CLAUDE_MODEL     = 'angeo_brand_vis/claude/model';
     private const XML_CLAUDE_MAX_TOKENS= 'angeo_brand_vis/claude/max_tokens';
     private const XML_CLAUDE_TIMEOUT   = 'angeo_brand_vis/claude/timeout';
+    private const XML_CLAUDE_GROUNDED  = 'angeo_brand_vis/claude/grounded';
 
     // ── Perplexity ─────────────────────────────────────────────────────────
     private const XML_PPX_ENABLED      = 'angeo_brand_vis/perplexity/enabled';
@@ -64,7 +66,10 @@ class Config
     private const XML_GROQ_TIMEOUT    = 'angeo_brand_vis/groq/timeout';
 
     // ── Queries ────────────────────────────────────────────────────────────
+    private const XML_Q_MAX_PROMPTS        = 'angeo_brand_vis/queries/max_prompts_per_provider';
+    /** Legacy path (pre-1.3.0 name) — still read as a fallback so saved values survive the rename. */
     private const XML_Q_QUERIES_PER_RUN    = 'angeo_brand_vis/queries/queries_per_provider';
+    private const XML_Q_QUERY_LANGUAGE     = 'angeo_brand_vis/queries/query_language';
     private const XML_Q_DELAY_MS           = 'angeo_brand_vis/queries/delay_between_ms';
     private const XML_Q_SYSTEM_PROMPT      = 'angeo_brand_vis/queries/system_prompt';
     private const XML_Q_CUSTOM_PROMPTS     = 'angeo_brand_vis/queries/custom_prompts';
@@ -76,6 +81,12 @@ class Config
     private const XML_Q_PRODUCT_SEARCH    = 'angeo_brand_vis/queries/prompt_product_search';
     private const XML_Q_COMPARISON        = 'angeo_brand_vis/queries/prompt_comparison';
     private const XML_Q_GIFT_GUIDE        = 'angeo_brand_vis/queries/prompt_gift_guide';
+
+    // ── Analysis (since 1.3.0) ─────────────────────────────────────────────
+    private const XML_A_LANGUAGES          = 'angeo_brand_vis/analysis/languages';
+    // ── Analysis (since 2.0.0) ─────────────────────────────────────────────
+    private const XML_A_COMPETITORS        = 'angeo_brand_vis/analysis/competitors';
+    private const XML_Q_REPEATS            = 'angeo_brand_vis/queries/repeats_per_prompt';
 
     // ── Scoring ────────────────────────────────────────────────────────────
     private const XML_S_MENTIONED         = 'angeo_brand_vis/scoring/weight_mentioned';
@@ -287,9 +298,105 @@ class Config
 
     // ── Query settings ─────────────────────────────────────────────────────
 
+    /**
+     * Maximum number of prompts sent to each provider per run.
+     *
+     * Renamed in 1.3.0 (the old name "queries per provider" described the
+     * cap incorrectly — it limits PROMPTS, and total queries = prompts ×
+     * providers). The legacy config path is still honoured so values saved
+     * under the old field survive the upgrade.
+     */
     public function getQueriesPerProvider(): int
     {
-        return max(1, (int) $this->scopeConfig->getValue(self::XML_Q_QUERIES_PER_RUN) ?: 3);
+        $value = $this->scopeConfig->getValue(self::XML_Q_MAX_PROMPTS)
+            ?? $this->scopeConfig->getValue(self::XML_Q_QUERIES_PER_RUN);
+        return max(1, (int) $value ?: 3);
+    }
+
+    /**
+     * Optional language instruction for prompt templates via {{language}}
+     * (since 1.3.0). Empty = placeholder replaced with "English".
+     */
+    public function getQueryLanguage(): string
+    {
+        return trim((string) $this->scopeConfig->getValue(self::XML_Q_QUERY_LANGUAGE)) ?: 'English';
+    }
+
+    /**
+     * Live-search (grounded) mode toggles per provider (since 2.0.0).
+     * OFF by default: grounded calls cost more and behave differently —
+     * enabling them is an explicit measurement decision.
+     */
+    public function isGptGrounded(): bool
+    {
+        return $this->scopeConfig->isSetFlag(self::XML_GPT_GROUNDED);
+    }
+
+    public function isClaudeGrounded(): bool
+    {
+        return $this->scopeConfig->isSetFlag(self::XML_CLAUDE_GROUNDED);
+    }
+
+    public function isGeminiGrounded(): bool
+    {
+        return $this->scopeConfig->isSetFlag(self::XML_GEMINI_GROUNDED);
+    }
+
+    /**
+     * Competitor watch-list for share-of-voice analysis (since 2.0.0).
+     * One per line: "Name | domain.tld", or a bare name, or a bare domain.
+     *
+     * @return array<int, array{name: string, domain: string}>
+     */
+    public function getCompetitors(): array
+    {
+        $raw = (string) $this->scopeConfig->getValue(self::XML_A_COMPETITORS);
+        $competitors = [];
+
+        foreach (array_filter(array_map('trim', explode("\n", $raw))) as $line) {
+            $name = $line;
+            $domain = '';
+
+            if (str_contains($line, '|')) {
+                [$name, $domain] = array_map('trim', explode('|', $line, 2));
+            } elseif (str_contains($line, '.') && !str_contains($line, ' ')) {
+                // Bare domain — derive a display name from it.
+                $domain = $line;
+                $name = (string) preg_replace('/\.[a-z]{2,}$/i', '', preg_replace('/^www\./i', '', $line));
+            }
+
+            $domain = strtolower((string) preg_replace('#^https?://#i', '', rtrim($domain, '/')));
+            if ($name !== '' || $domain !== '') {
+                $competitors[] = ['name' => $name, 'domain' => $domain];
+            }
+        }
+
+        return $competitors;
+    }
+
+    /**
+     * Attempts per prompt per provider (since 2.0.0). LLM answers are
+     * stochastic even at low temperature; the median of N attempts is a far
+     * stabler trend point than a single sample. Default 1 (cost-neutral
+     * upgrade); 3 recommended for weekly trend tracking.
+     */
+    public function getRepeatsPerPrompt(): int
+    {
+        $value = (int) $this->scopeConfig->getValue(self::XML_Q_REPEATS);
+        return min(5, max(1, $value ?: 1));
+    }
+
+    /**
+     * Language packs enabled for response analysis (since 1.3.0).
+     * Empty selection = all shipped packs (safe default: union matching
+     * across packs has no practical false-positive cost).
+     *
+     * @return string[] PhrasePack::LANG_* codes
+     */
+    public function getAnalysisLanguages(): array
+    {
+        $raw = (string) $this->scopeConfig->getValue(self::XML_A_LANGUAGES);
+        return array_values(array_filter(array_map('trim', explode(',', $raw))));
     }
 
     public function getDelayBetweenQueriesMs(): int
@@ -344,12 +451,13 @@ class Config
     public function buildPrompt(string $template): string
     {
         return str_replace(
-            ['{{brand}}', '{{domain}}', '{{category}}', '{{products}}'],
+            ['{{brand}}', '{{domain}}', '{{category}}', '{{products}}', '{{language}}'],
             [
                 $this->getBrandName(),
                 $this->getBrandDomain(),
                 $this->getStoreCategory(),
                 implode(', ', array_slice($this->getTopProducts(), 0, 3)),
+                $this->getQueryLanguage(),
             ],
             $template
         );

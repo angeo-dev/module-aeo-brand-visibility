@@ -38,6 +38,10 @@ class GroqProviderTest extends TestCase
 
     public function testIsConfiguredWithApiKey(): void
     {
+        // 1.3.0 fix: isConfigured() = enabled AND key present. The original
+        // test never mocked the enabled flag and silently failed — one more
+        // catch from finally having CI.
+        $this->config->method('isGroqEnabled')->willReturn(true);
         $this->config->method('getGroqApiKey')->willReturn('gsk_abc123');
         $this->assertTrue($this->provider->isConfigured());
     }

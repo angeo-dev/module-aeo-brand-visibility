@@ -14,12 +14,14 @@
                 <max_tokens>800</max_tokens>
                 <temperature>0.3</temperature>
                 <timeout>45</timeout>
+                <grounded>0</grounded>
             </chatgpt>
             <claude>
                 <enabled>0</enabled>
                 <model>claude-sonnet-4-6</model>
                 <max_tokens>800</max_tokens>
                 <timeout>60</timeout>
+                <grounded>0</grounded>
             </claude>
             <perplexity>
                 <enabled>0</enabled>
@@ -32,6 +34,7 @@
                 <model>gemini-2.5-flash-preview-05-20</model>
                 <max_tokens>800</max_tokens>
                 <timeout>45</timeout>
+                <grounded>0</grounded>
             </gemini>
             <groq>
                 <enabled>0</enabled>
@@ -40,7 +43,11 @@
                 <timeout>30</timeout>
             </groq>
             <queries>
+                <max_prompts_per_provider>3</max_prompts_per_provider>
+                <!-- legacy pre-1.3.0 path kept as fallback in Config::getQueriesPerProvider() -->
                 <queries_per_provider>3</queries_per_provider>
+                <query_language>English</query_language>
+                <repeats_per_prompt>1</repeats_per_prompt>
                 <delay_between_ms>500</delay_between_ms>
                 <enable_recommendation>1</enable_recommendation>
                 <enable_category>1</enable_category>
@@ -49,6 +56,11 @@
                 <enable_comparison>0</enable_comparison>
                 <enable_gift_guide>0</enable_gift_guide>
             </queries>
+            <analysis>
+                <!-- empty = all shipped phrase packs (en,nl,de,fr,uk) -->
+                <languages></languages>
+                <competitors></competitors>
+            </analysis>
             <scoring>
                 <pass_threshold>60</pass_threshold>
                 <warn_threshold>30</warn_threshold>

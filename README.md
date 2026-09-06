@@ -6,7 +6,7 @@
 [![Magento](https://img.shields.io/badge/Magento-2.4.x-orange.svg)](https://magento.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Live AI brand visibility audit for Magento 2 — queries ChatGPT, Claude, Perplexity, Gemini and Groq with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence.**
+**Live AI brand visibility audit for Magento 2 — queries ChatGPT, Claude, Perplexity, Gemini and Groq with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence. Multilingual since 1.3: detects recommendations and sentiment in English, Dutch, German, French and Ukrainian answers, and probes models in your market's language via the `{{language}}` placeholder.**
 
 `angeo/module-aeo-brand-visibility` is an open-source Magento 2 module that answers one question: *when someone asks ChatGPT "where should I buy X?", does your store appear in the answer?* It runs configurable prompts across all major AI providers, detects brand signals in responses, and scores your visibility from 0 to 100 with a letter grade.
 
@@ -54,6 +54,19 @@ Each AI query result is analysed for five signals:
 
 Each signal has a configurable weight. The overall score is a weighted average across all successful query results, converted to 0–100 and graded A–F.
 
+### Two measurement modes (since 2.0)
+
+AI assistants answer in two fundamentally different ways, and they measure different things:
+
+- **Training recall** (default) — the model answers from what it memorised during training. Fast and cheap, but months out of date and blind to your latest content and backlinks.
+- **Live web search** (*grounded* toggle) — the model actually searches the web before answering, exactly like a real ChatGPT / Gemini / Claude user's session. This is what "AI search visibility" really means.
+
+Enable *Live Web Search* per provider (ChatGPT, Claude, Gemini; Perplexity is always live, Groq never is). Every result records which mode produced it, and the report reports the mix rather than averaging the two silently.
+
+### Share of voice (since 2.0)
+
+A visibility score in isolation is hard to act on. Add competitors to the watch-list (`Name | domain.tld` per line) and every answer to "what are the best stores for X?" — which already names the competition — is mined for who else shows up. The report ranks your brand against each competitor: *you appear in 20% of answers, competitor X in 80%* names the actual problem an abstract "40/100" hides.
+
 ---
 
 ## Supported AI providers
@@ -61,10 +74,12 @@ Each signal has a configurable weight. The overall score is a weighted average a
 | Provider | Models | Cost | Notes |
 |---|---|---|---|
 | **Groq** | llama-3.3-70b-versatile, mixtral-8x7b | **Free** | Best starting point — 14,400 req/day, no card |
-| **Perplexity** | sonar, sonar-pro, sonar-deep-research | Paid | Live web search — most realistic signal |
-| **OpenAI** | gpt-4.1, gpt-4.1-mini, gpt-4o | Paid | |
-| **Anthropic Claude** | claude-sonnet-4-6, claude-haiku-4-5 | Paid | |
-| **Google Gemini** | gemini-2.5-flash-preview, gemini-2.0-flash | Free tier + paid | |
+| **Perplexity** | sonar, sonar-pro, sonar-deep-research | Paid | Always live web search — most realistic signal |
+| **OpenAI** | gpt-4.1, gpt-4.1-mini, gpt-4o | Paid | Optional live search via Responses API `web_search` |
+| **Anthropic Claude** | claude-sonnet-4-6, claude-haiku-4-5 | Paid | Optional live search via `web_search` tool |
+| **Google Gemini** | gemini-2.5-flash-preview, gemini-2.0-flash | Free tier + paid | Optional Grounding with Google Search |
+
+> **Extending providers (since 2.0):** providers are wired as a di.xml array. Add your own (Mistral, DeepSeek, a local Ollama, …) by implementing `Angeo\AeoBrandVisibility\Api\AiProviderInterface` and appending one `<item>` to the `providers` argument of `BrandVisibilityService` — no core changes.
 
 Enable one or more providers. Each active provider runs all configured prompts, and results are aggregated into a single score.
 
@@ -74,7 +89,7 @@ Enable one or more providers. Each active provider runs all configured prompts, 
 
 - PHP 8.2, 8.3, or 8.4
 - Magento 2.4.6 / 2.4.7 / 2.4.8 (Adobe Commerce / Mage-OS supported)
-- `angeo/module-aeo-audit` ^3.0
+- `angeo/module-aeo-audit` ^3.0 || ^4.0
 - `ext-curl`
 
 > **v1.1.0 compatibility note**: this module requires `angeo/module-aeo-audit` v3.0 or newer. If you're on v2.x of the audit module, either update both, or pin this module to ^1.0 which still works against v2.x.

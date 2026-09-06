@@ -64,6 +64,55 @@ final class BrandVisibilityReport
         return $grouped;
     }
 
+    /**
+     * Share of voice across successful results (since 2.0.0): for the own
+     * brand and every watched competitor, the percentage of answers that
+     * mention or cite them. This is the number that gives the absolute
+     * score meaning — "40/100" says little; "you appear in 20% of answers,
+     * competitor X in 80%" names the actual problem.
+     *
+     * @return array<string, float> display name => 0..100
+     */
+    public function shareOfVoice(): array
+    {
+        $ok = $this->successfulResults();
+        if ($ok === []) {
+            return [];
+        }
+
+        $sov = [$this->brandName => $this->signalRate('mentioned')];
+
+        $counts = [];
+        foreach ($ok as $result) {
+            foreach ($result->competitorMentions as $name => $hit) {
+                $counts[$name] = ($counts[$name] ?? 0) + ($hit ? 1 : 0);
+            }
+        }
+        foreach ($counts as $name => $hits) {
+            $sov[$name] = round($hits / count($ok) * 100, 1);
+        }
+
+        arsort($sov);
+        return $sov;
+    }
+
+    /**
+     * How many successful results were produced with live web access vs
+     * training recall (since 2.0.0). The two modes measure different things;
+     * the report surfaces the mix instead of hiding it.
+     *
+     * @return array{grounded: int, recall: int}
+     */
+    public function groundingBreakdown(): array
+    {
+        $grounded = 0;
+        $recall   = 0;
+        foreach ($this->successfulResults() as $result) {
+            $result->grounded ? $grounded++ : $recall++;
+        }
+        return ['grounded' => $grounded, 'recall' => $recall];
+    }
+
     /** Average score per provider */
     public function scoreByProvider(): array
     {

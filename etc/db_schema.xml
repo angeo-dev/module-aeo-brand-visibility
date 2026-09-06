@@ -12,6 +12,7 @@
         <column xsi:type="varchar"   name="grade"          nullable="false" length="1"   default="F" comment="Grade A-F"/>
         <column xsi:type="text"      name="provider_scores" nullable="true" comment="Provider scores JSON"/>
         <column xsi:type="text"      name="signal_rates"   nullable="true" comment="Signal rates JSON"/>
+        <column xsi:type="text"      name="share_of_voice" nullable="true" comment="Share of voice JSON (since 2.0.0): brand + competitors mention rates"/>
         <column xsi:type="mediumtext" name="results_json"  nullable="true" comment="Full results JSON"/>
         <column xsi:type="varchar"   name="triggered_by"   nullable="false" length="64" default="admin" comment="Triggered by: admin|cron|cli"/>
         <column xsi:type="smallint"  name="queries_count"  nullable="false" default="0" comment="Total queries run"/>

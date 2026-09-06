@@ -48,6 +48,11 @@ class AuditResultRepository
             'signals'        => $r->signals,
             'score'          => $r->score,
             'error'          => $r->errorMessage,
+            'citations'      => $r->citations,
+            'grounded'       => $r->grounded,
+            'competitors'    => $r->competitorMentions,
+            'cited_domains'  => $r->citedDomains,
+            'attempts'       => $r->attempts,
         ], $report->results);
 
         $model->setData([
@@ -57,6 +62,7 @@ class AuditResultRepository
             'grade'           => $report->getGrade(),
             'provider_scores' => $this->json->serialize($report->scoreByProvider()),
             'signal_rates'    => $this->json->serialize($signalRates),
+            'share_of_voice'  => $this->json->serialize($report->shareOfVoice()),
             'results_json'    => $this->json->serialize($resultsData),
             'triggered_by'    => $triggeredBy,
             'queries_count'   => count($report->results),

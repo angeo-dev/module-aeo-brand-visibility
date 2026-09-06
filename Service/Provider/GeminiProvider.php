@@ -6,20 +6,20 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Angeo\AeoBrandVisibility\Model\Result\ProviderResponse;
 use Magento\Framework\Serialize\SerializerInterface;
 
 /**
- * Google Gemini provider via Google AI Studio REST API.
+ * Google Gemini provider via the Google AI Studio REST API.
  *
- * Uses the generateContent endpoint — request/response format differs
- * from the OpenAI-compatible format used by ChatGPT, Claude and Perplexity.
+ * Two modes since 2.0.0: plain training recall (default) and Grounding with
+ * Google Search — the same retrieval Gemini consumer surfaces use. Grounded
+ * answers return groundingMetadata with the exact web sources; collected
+ * here as structured citations.
  *
  * Free tier (Google AI Studio):
- *   - gemini-2.0-flash: 15 req/min, 1500 req/day — sufficient for brand visibility testing
- *   - gemini-1.5-pro:   2 req/min,  50 req/day
- *
- * Get a free API key (no card required):
- *   aistudio.google.com → Get API key → Create API key
+ *   - gemini-2.0-flash: 15 req/min, 1500 req/day
+ * Get a free API key (no card required): aistudio.google.com
  *
  * API reference: https://ai.google.dev/api/generate-content
  */
@@ -42,46 +42,71 @@ class GeminiProvider extends AbstractHttpProvider implements AiProviderInterface
         return $this->config->isGeminiEnabled() && $this->config->getGeminiApiKey() !== '';
     }
 
-    public function query(string $systemPrompt, string $userPrompt): string
+    public function supportsGrounding(): bool { return true; }
+    public function isGrounded(): bool        { return $this->config->isGeminiGrounded(); }
+
+    public function query(string $systemPrompt, string $userPrompt): ProviderResponse
     {
-        $model = $this->config->getGeminiModel();
-        $url   = sprintf(self::BASE_URL, $model);
+        $grounded = $this->isGrounded();
+        $url      = sprintf(self::BASE_URL, $this->config->getGeminiModel());
+
+        $payload = [
+            'system_instruction' => [
+                'parts' => [['text' => $systemPrompt]],
+            ],
+            'contents' => [
+                [
+                    'role'  => 'user',
+                    'parts' => [['text' => $userPrompt]],
+                ],
+            ],
+            'generationConfig' => [
+                'maxOutputTokens' => $this->config->getGeminiMaxTokens(),
+                'temperature'     => 0.2,
+            ],
+        ];
+
+        if ($grounded) {
+            // Empty object required by the API: {"google_search": {}}
+            $payload['tools'] = [['google_search' => (object) []]];
+        }
 
         $data = $this->post(
             $url,
-            [
-                'system_instruction' => [
-                    'parts' => [['text' => $systemPrompt]],
-                ],
-                'contents' => [
-                    [
-                        'role'  => 'user',
-                        'parts' => [['text' => $userPrompt]],
-                    ],
-                ],
-                'generationConfig' => [
-                    'maxOutputTokens' => $this->config->getGeminiMaxTokens(),
-                    'temperature'     => 0.3,
-                ],
-            ],
+            $payload,
             [
                 'Content-Type: application/json',
                 'x-goog-api-key: ' . $this->config->getGeminiApiKey(),
             ],
-            $this->config->getGeminiTimeout()
+            $grounded
+                ? max($this->config->getGeminiTimeout(), 60)
+                : $this->config->getGeminiTimeout()
         );
 
-        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        $candidate = $data['candidates'][0] ?? [];
+        $text = '';
+        foreach ($candidate['content']['parts'] ?? [] as $part) {
+            if (isset($part['text'])) {
+                $text .= ($text !== '' ? "\n" : '') . $part['text'];
+            }
+        }
 
         if ($text === '') {
             // Surface finish reason if available (e.g. SAFETY, RECITATION)
-            $reason = $data['candidates'][0]['finishReason'] ?? 'unknown';
+            $reason = $candidate['finishReason'] ?? 'unknown';
             throw new \RuntimeException(
                 sprintf('Gemini: empty response. Finish reason: %s', $reason)
             );
         }
 
-        return $text;
+        $citations = [];
+        foreach ($candidate['groundingMetadata']['groundingChunks'] ?? [] as $chunk) {
+            if (!empty($chunk['web']['uri'])) {
+                $citations[] = (string) $chunk['web']['uri'];
+            }
+        }
+
+        return new ProviderResponse($text, array_values(array_unique($citations)), $grounded);
     }
 
     /**

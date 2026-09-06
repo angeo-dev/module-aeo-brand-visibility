@@ -6,6 +6,7 @@ namespace Angeo\AeoBrandVisibility\Service\Provider;
 
 use Angeo\AeoBrandVisibility\Api\AiProviderInterface;
 use Angeo\AeoBrandVisibility\Model\Config;
+use Angeo\AeoBrandVisibility\Model\Result\ProviderResponse;
 use Magento\Framework\Serialize\SerializerInterface;
 
 /**
@@ -33,7 +34,12 @@ class PerplexityProvider extends AbstractHttpProvider implements AiProviderInter
         return $this->config->isPerplexityEnabled() && $this->config->getPerplexityApiKey() !== '';
     }
 
-    public function query(string $systemPrompt, string $userPrompt): string
+    public function supportsGrounding(): bool { return true; }
+
+    /** Perplexity Sonar is live web search by nature — always grounded. */
+    public function isGrounded(): bool { return true; }
+
+    public function query(string $systemPrompt, string $userPrompt): ProviderResponse
     {
         $data = $this->post(
             self::URL,
@@ -59,12 +65,14 @@ class PerplexityProvider extends AbstractHttpProvider implements AiProviderInter
             throw new \RuntimeException('Perplexity: empty response content.');
         }
 
-        // Append cited URLs to the text for better domain detection in ResponseAnalyzer
-        $citations = $data['citations'] ?? [];
-        if (!empty($citations)) {
-            $content .= "\n\nSources: " . implode(', ', array_slice($citations, 0, 10));
-        }
+        // 2.0.0: citations are returned STRUCTURED instead of being appended
+        // to the text as a "Sources:" suffix — being a cited source and being
+        // mentioned in prose are different signals with different weight.
+        $citations = array_values(array_filter(array_map(
+            'strval',
+            (array) ($data['citations'] ?? [])
+        )));
 
-        return $content;
+        return new ProviderResponse($content, $citations, true);
     }
 }
