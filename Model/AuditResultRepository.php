@@ -68,6 +68,7 @@ class AuditResultRepository
             'queries_count'   => count($report->results),
             'errors_count'    => count($report->failedResults()),
             'from_cache'      => $report->fromCache ? 1 : 0,
+            'store_id'        => $report->storeId,
             'created_at'      => $report->generatedAt->format('Y-m-d H:i:s'),
         ]);
 
@@ -90,6 +91,30 @@ class AuditResultRepository
     }
 
     /**
+     * The most recent non-cached, non-error record for the given store scope
+     * strictly BEFORE $beforeId — the baseline an alert compares against
+     * (since 3.0.0). Returns null when there is no prior run.
+     */
+    public function getPreviousResult(int $beforeId, ?int $storeId): ?AuditResult
+    {
+        /** @var Collection $collection */
+        $collection = $this->collectionFactory->create();
+        $collection->addFieldToFilter('id', ['lt' => $beforeId]);
+        $collection->addFieldToFilter('from_cache', 0);
+        if ($storeId === null) {
+            $collection->addFieldToFilter('store_id', ['null' => true]);
+        } else {
+            $collection->addFieldToFilter('store_id', $storeId);
+        }
+        $collection->setOrder('id', 'DESC');
+        $collection->setPageSize(1);
+        $collection->setCurPage(1);
+
+        $row = $collection->getFirstItem();
+        return $row->getId() ? $row : null;
+    }
+
+    /**
      * Latest N records, newest first.
      */
     public function getLatest(int $limit = 20): Collection
@@ -100,6 +125,26 @@ class AuditResultRepository
         $collection->setPageSize($limit);
         $collection->setCurPage(1);
         return $collection;
+    }
+
+    /**
+     * Newest non-cached record overall or for a store scope (since 3.0.0) —
+     * backing for the REST "latest" endpoint. Null when none exists.
+     */
+    public function getLatestForStore(?int $storeId): ?AuditResult
+    {
+        /** @var Collection $collection */
+        $collection = $this->collectionFactory->create();
+        $collection->addFieldToFilter('from_cache', 0);
+        if ($storeId !== null) {
+            $collection->addFieldToFilter('store_id', $storeId);
+        }
+        $collection->setOrder('id', 'DESC');
+        $collection->setPageSize(1);
+        $collection->setCurPage(1);
+
+        $row = $collection->getFirstItem();
+        return $row->getId() ? $row : null;
     }
 
     /**

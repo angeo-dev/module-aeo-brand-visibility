@@ -18,6 +18,7 @@
         <column xsi:type="smallint"  name="queries_count"  nullable="false" default="0" comment="Total queries run"/>
         <column xsi:type="smallint"  name="errors_count"   nullable="false" default="0" comment="Failed queries count"/>
         <column xsi:type="smallint"  name="from_cache"     nullable="false" default="0" comment="1 if result was served from cache"/>
+        <column xsi:type="int"       name="store_id"       unsigned="true" nullable="true" comment="Store view this run was scoped to (since 3.0.0); null = default scope"/>
         <column xsi:type="datetime"  name="created_at"     nullable="true" comment="Audit timestamp"/>
 
         <constraint xsi:type="primary" referenceId="PRIMARY">
@@ -29,6 +30,9 @@
         </index>
         <index referenceId="ANGEO_BRAND_VIS_OVERALL_SCORE" indexType="btree">
             <column name="overall_score"/>
+        </index>
+        <index referenceId="ANGEO_BRAND_VIS_STORE_ID" indexType="btree">
+            <column name="store_id"/>
         </index>
     </table>
 </schema>

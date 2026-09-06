@@ -24,6 +24,8 @@ use Magento\Framework\Serialize\SerializerInterface;
  * @method int    getQueriesCount()
  * @method int    getErrorsCount()
  * @method int    getFromCache()
+ * @method int|null getStoreId()
+ * @method string getShareOfVoice()
  * @method string getCreatedAt()
  */
 class AuditResult extends AbstractModel
@@ -60,6 +62,12 @@ class AuditResult extends AbstractModel
     public function getResultsDecoded(): array
     {
         return $this->decode((string) $this->getResultsJson());
+    }
+
+    /** @return array<string, mixed> share-of-voice map (since 3.0.0) */
+    public function getShareOfVoiceDecoded(): array
+    {
+        return $this->decode((string) $this->getShareOfVoice());
     }
 
     /** @return array<mixed> */

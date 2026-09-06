@@ -9,6 +9,8 @@ use Angeo\AeoAudit\Model\Checker\AbstractChecker;
 use Angeo\AeoAudit\Model\Report\CheckResult;
 use Angeo\AeoAudit\Service\HttpCache;
 use Angeo\AeoAudit\Service\StoreUrlSampler;
+use Angeo\AeoAudit\Service\BotRegistry;
+use Angeo\AeoAudit\Model\ResourceModel\BotHit;
 use Angeo\AeoBrandVisibility\Model\Config;
 use Angeo\AeoBrandVisibility\Model\Result\BrandVisibilityReport;
 use Angeo\AeoBrandVisibility\Service\BrandVisibilityService;
@@ -39,6 +41,11 @@ class BrandVisibilityChecker extends AbstractChecker
         StoreUrlSampler $urlSampler,
         private readonly Config $config,
         private readonly BrandVisibilityService $service,
+        // aeo-audit v4 evidence layer (since 3.0.0). Hard dependency in
+        // composer (^4.0), but nullable here so the checker stays unit-testable
+        // in isolation and degrades cleanly if the resource is unavailable.
+        private readonly ?BotHit $botHit = null,
+        private readonly ?BotRegistry $botRegistry = null,
     ) {
         parent::__construct($httpCache, $urlSampler);
     }
@@ -114,7 +121,11 @@ class BrandVisibilityChecker extends AbstractChecker
 
         // 3. Run the live audit (cached per configured TTL inside the service).
         try {
-            $report = $this->service->run(forceRefresh: false);
+            $report = $this->service->run(
+                forceRefresh: false,
+                triggeredBy: 'audit',
+                storeId: (int) $store->getId()
+            );
         } catch (\Throwable $e) {
             return $this->fail(
                 'Brand visibility check could not run: ' . $e->getMessage(),
@@ -124,10 +135,10 @@ class BrandVisibilityChecker extends AbstractChecker
             );
         }
 
-        return $this->buildResult($report);
+        return $this->buildResult($report, (int) $store->getId());
     }
 
-    private function buildResult(BrandVisibilityReport $report): CheckResult
+    private function buildResult(BrandVisibilityReport $report, int $storeId): CheckResult
     {
         $score          = $report->getOverallScore();
         $grade          = $report->getGrade();
@@ -177,7 +188,7 @@ class BrandVisibilityChecker extends AbstractChecker
             'recall_answers'   => $grounding['recall'],
         ];
 
-        $recommendation = $this->buildRecommendation($report, $score);
+        $recommendation = $this->buildRecommendation($report, $score, $storeId);
 
         return match (true) {
             $score >= $passThreshold => $this->pass($message, $details),
@@ -186,9 +197,24 @@ class BrandVisibilityChecker extends AbstractChecker
         };
     }
 
-    private function buildRecommendation(BrandVisibilityReport $report, int $score): string
+    private function buildRecommendation(BrandVisibilityReport $report, int $score, int $storeId = 0): string
     {
         $tips = [];
+
+        // Evidence tie-in (since 3.0.0): if visibility is weak AND the store's
+        // own instrumentation shows the SEARCH-class crawlers never arrived,
+        // the likely cause is upstream blocking, not thin content. Point the
+        // operator at the waf_reality signal instead of guessing.
+        $silence = $this->searchCrawlerSilence($storeId);
+        if ($silence !== null && $score < $this->config->getPassThreshold()) {
+            $tips[] = sprintf(
+                'AI search crawlers (%s) have not reached this store in the last 30 days, '
+                . 'yet training-recall visibility is low — this often means a WAF/CDN or '
+                . 'robots rule is blocking them. Check the "waf_reality" and '
+                . '"ai_crawler_activity" signals in this same audit before investing in content.',
+                $silence
+            );
+        }
 
         // Share of voice: name the competitor that actually outranks the brand.
         $sov = $report->shareOfVoice();
@@ -232,5 +258,41 @@ class BrandVisibilityChecker extends AbstractChecker
         }
 
         return implode(' ', $tips);
+    }
+
+    /**
+     * Comma-separated list of SEARCH-critical bots that show ZERO hits while
+     * the store has bot-hit data at all — i.e. crawlers that should be here
+     * but aren't. Returns null when the evidence layer is unavailable, the
+     * store has no instrumentation data yet, or every search crawler has been
+     * seen (nothing to warn about).
+     */
+    private function searchCrawlerSilence(int $storeId): ?string
+    {
+        if ($this->botHit === null || $this->botRegistry === null || $storeId <= 0) {
+            return null;
+        }
+
+        try {
+            if (!$this->botHit->hasAnyData($storeId)) {
+                return null; // no instrumentation baseline → cannot claim silence
+            }
+            $aggregates = $this->botHit->getAggregates($storeId, 30);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $silent = [];
+        foreach ($this->botRegistry->byClass(BotRegistry::CLASS_SEARCH) as $code => $bot) {
+            if (empty($bot['search_critical'])) {
+                continue;
+            }
+            $hits = $aggregates[$code]['hits'] ?? 0;
+            if ($hits === 0) {
+                $silent[] = $bot['label'] ?? $code;
+            }
+        }
+
+        return $silent === [] ? null : implode(', ', $silent);
     }
 }

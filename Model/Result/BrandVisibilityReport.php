@@ -14,6 +14,9 @@ final class BrandVisibilityReport
         public readonly array              $results,
         public readonly \DateTimeImmutable $generatedAt,
         public readonly bool               $fromCache = false,
+        // Store view this report was produced for (since 3.0.0). null = default
+        // scope / all-stores aggregate.
+        public readonly ?int               $storeId = null,
     ) {}
 
     public function getOverallScore(): int

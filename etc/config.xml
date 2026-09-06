@@ -60,7 +60,13 @@
                 <!-- empty = all shipped phrase packs (en,nl,de,fr,uk) -->
                 <languages></languages>
                 <competitors></competitors>
+                <sentiment_mode>phrase</sentiment_mode>
             </analysis>
+            <alerting>
+                <enabled>0</enabled>
+                <drop_threshold>10</drop_threshold>
+                <sender_identity>general</sender_identity>
+            </alerting>
             <scoring>
                 <pass_threshold>60</pass_threshold>
                 <warn_threshold>30</warn_threshold>

@@ -81,6 +81,14 @@ A visibility score in isolation is hard to act on. Add competitors to the watch-
 
 > **Extending providers (since 2.0):** providers are wired as a di.xml array. Add your own (Mistral, DeepSeek, a local Ollama, …) by implementing `Angeo\AeoBrandVisibility\Api\AiProviderInterface` and appending one `<item>` to the `providers` argument of `BrandVisibilityService` — no core changes.
 
+### Per-store, alerting, API (since 3.0)
+
+- **Per-store-view scoping** — brand identity, competitors and languages are read at store scope, so a multi-market Magento install gets an independent score, trend and alerting baseline per locale. The scheduled cron runs once per enabled store view.
+- **Email alerts** — a scheduled run that drops past a threshold, or a competitor newly overtaking you in share of voice, emails your team. Configured under *Brand Visibility → Alerting*; fires on cron/CLI only.
+- **REST API** — `GET /V1/angeo/brand-visibility/latest` (and `…/latest/store/:storeId`) returns the newest summary for headless storefronts and dashboards.
+- **LLM-judge sentiment** — optionally let the cheapest configured model classify sentiment in context instead of phrase packs; falls back automatically on failure.
+- **Evidence tie-in with `angeo/module-aeo-audit` v4** — when visibility is weak *and* your store's own instrumentation shows AI search crawlers never arrived, the audit checker points you at the WAF instead of at your content.
+
 Enable one or more providers. Each active provider runs all configured prompts, and results are aggregated into a single score.
 
 ---
@@ -89,10 +97,10 @@ Enable one or more providers. Each active provider runs all configured prompts, 
 
 - PHP 8.2, 8.3, or 8.4
 - Magento 2.4.6 / 2.4.7 / 2.4.8 (Adobe Commerce / Mage-OS supported)
-- `angeo/module-aeo-audit` ^3.0 || ^4.0
+- `angeo/module-aeo-audit` ^4.0 (the v3 evidence tie-in uses the v4 bot-hit layer)
 - `ext-curl`
 
-> **v1.1.0 compatibility note**: this module requires `angeo/module-aeo-audit` v3.0 or newer. If you're on v2.x of the audit module, either update both, or pin this module to ^1.0 which still works against v2.x.
+> **Compatibility note**: 3.x requires `angeo/module-aeo-audit` ^4.0 for the evidence tie-in. If you are on the audit module's v3.x, pin this module to `^2.0`, which requires `^3.0 || ^4.0`.
 
 ---
 

@@ -7,6 +7,7 @@ namespace Angeo\AeoBrandVisibility\Test\Unit\Service;
 use Angeo\AeoBrandVisibility\Model\Config;
 use Angeo\AeoBrandVisibility\Service\Analysis\PhrasePack;
 use Angeo\AeoBrandVisibility\Service\ResponseAnalyzer;
+use Angeo\AeoBrandVisibility\Service\SentimentJudge;
 use PHPUnit\Framework\TestCase;
 
 class ResponseAnalyzerTest extends TestCase
@@ -184,5 +185,52 @@ class ResponseAnalyzerTest extends TestCase
         // mentioned + recommended + url_cited + positive (+ first_result) —
         // with the default weights this must land in the upper half at minimum.
         $this->assertGreaterThanOrEqual(70, $score);
+    }
+
+    // ── LLM sentiment routing (3.0.0) ────────────────────────────────────
+
+    public function testLlmJudgeOverridesPhraseSentimentWhenModeIsLlm(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('getBrandName')->willReturn('Angeo');
+        $config->method('getBrandDomain')->willReturn('');
+        $config->method('getBrandKeywords')->willReturn([]);
+        $config->method('getAnalysisLanguages')->willReturn([]);
+        $config->method('getCompetitors')->willReturn([]);
+        $config->method('getScoringWeight')->willReturn(1.0);
+        $config->method('getSentimentMode')->willReturn('llm');
+
+        // Text has NO positive phrase, so phrase packs would score false —
+        // the judge flips it to true, proving the judge is consulted.
+        $judge = $this->createMock(SentimentJudge::class);
+        $judge->method('isPositive')->willReturn(true);
+
+        $analyzer = new ResponseAnalyzer($config, new PhrasePack(), $judge);
+
+        ['signals' => $signals] = $analyzer->analyse('Angeo sells ceramics online.');
+
+        $this->assertTrue($signals['positive_sentiment']);
+    }
+
+    public function testLlmJudgeNullVerdictFallsBackToPhrases(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('getBrandName')->willReturn('Angeo');
+        $config->method('getBrandDomain')->willReturn('');
+        $config->method('getBrandKeywords')->willReturn([]);
+        $config->method('getAnalysisLanguages')->willReturn([]);
+        $config->method('getCompetitors')->willReturn([]);
+        $config->method('getScoringWeight')->willReturn(1.0);
+        $config->method('getSentimentMode')->willReturn('llm');
+
+        $judge = $this->createMock(SentimentJudge::class);
+        $judge->method('isPositive')->willReturn(null); // undetermined
+
+        $analyzer = new ResponseAnalyzer($config, new PhrasePack(), $judge);
+
+        // Phrase "excellent" present → fallback detection must catch it.
+        ['signals' => $signals] = $analyzer->analyse('Angeo is an excellent ceramics store.');
+
+        $this->assertTrue($signals['positive_sentiment']);
     }
 }

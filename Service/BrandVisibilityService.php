@@ -43,13 +43,19 @@ class BrandVisibilityService
         private readonly LoggerInterface     $logger,
         private readonly \Angeo\AeoBrandVisibility\Model\AuditResultRepository $repository,
         private readonly array               $providers = [],
+        // Optional (since 3.0.0): null keeps the service usable without the
+        // alerting collaborator (e.g. in isolation tests).
+        private readonly ?\Angeo\AeoBrandVisibility\Service\AlertDispatcher $alerting = null,
     ) {}
 
     // ── Public ──────────────────────────────────────────────────────────────
 
-    public function run(bool $forceRefresh = false, string $triggeredBy = 'admin'): BrandVisibilityReport
-    {
-        $cacheKey = $this->cacheKey();
+    public function run(
+        bool $forceRefresh = false,
+        string $triggeredBy = 'admin',
+        ?int $storeId = null
+    ): BrandVisibilityReport {
+        $cacheKey = $this->cacheKey($storeId);
 
         if (!$forceRefresh && $this->config->getCacheTtlHours() > 0) {
             $cached = $this->fromCache($cacheKey);
@@ -72,7 +78,8 @@ class BrandVisibilityService
         }
 
         $this->logger->info('[BrandVis] Starting audit', [
-            'brand'     => $this->config->getBrandName(),
+            'brand'     => $this->config->getBrandName($storeId),
+            'store_id'  => $storeId,
             'providers' => array_map(fn($p) => $p->getProviderId(), $providers),
             'prompts'   => array_keys($prompts),
         ]);
@@ -83,8 +90,8 @@ class BrandVisibilityService
 
         foreach ($providers as $provider) {
             foreach ($prompts as $promptKey => $template) {
-                $userPrompt = $this->config->buildPrompt($template);
-                $result     = $this->executeQuery($provider, $promptKey, $userPrompt, $systemPrompt);
+                $userPrompt = $this->config->buildPrompt($template, $storeId);
+                $result     = $this->executeQuery($provider, $promptKey, $userPrompt, $systemPrompt, $storeId);
                 $results[]  = $result;
 
                 $this->logger->info('[BrandVis] Query done', [
@@ -104,11 +111,12 @@ class BrandVisibilityService
         }
 
         $report = new BrandVisibilityReport(
-            brandName:   $this->config->getBrandName(),
-            brandDomain: $this->config->getBrandDomain(),
+            brandName:   $this->config->getBrandName($storeId),
+            brandDomain: $this->config->getBrandDomain($storeId),
             results:     $results,
             generatedAt: new \DateTimeImmutable(),
             fromCache:   false,
+            storeId:     $storeId,
         );
 
         $this->toCache($cacheKey, $report);
@@ -116,6 +124,17 @@ class BrandVisibilityService
         try {
             $saved = $this->repository->saveReport($report, $triggeredBy);
             $this->logger->info('[BrandVis] Saved to DB', ['id' => $saved->getId()]);
+
+            // Alerting (since 3.0.0): compare with the previous persisted run
+            // and notify on a significant score drop. Guarded so interactive
+            // admin previews never email — only scheduled/CLI runs.
+            if ($this->alerting !== null && in_array($triggeredBy, ['cron', 'cli'], true)) {
+                try {
+                    $this->alerting->maybeAlert($report, (int) $saved->getId());
+                } catch (\Throwable $e) {
+                    $this->logger->error('[BrandVis] Alerting failed', ['error' => $e->getMessage()]);
+                }
+            }
         } catch (\Throwable $e) {
             $this->logger->error('[BrandVis] Failed to save to DB', [
                 'error' => $e->getMessage(),
@@ -170,7 +189,8 @@ class BrandVisibilityService
         AiProviderInterface $provider,
         string $promptKey,
         string $userPrompt,
-        string $systemPrompt
+        string $systemPrompt,
+        ?int $storeId = null
     ): BrandQueryResult {
         $repeats  = $this->config->getRepeatsPerPrompt();
         $attempts = [];
@@ -200,7 +220,7 @@ class BrandVisibilityService
 
                 $attempts[] = [
                     'response' => $response,
-                    'analysis' => $this->analyzer->analyse($response->text, $response->citations),
+                    'analysis' => $this->analyzer->analyse($response->text, $response->citations, $storeId),
                 ];
             } catch (\Throwable $e) {
                 $lastError = $e;
@@ -314,7 +334,7 @@ class BrandVisibilityService
         return null;
     }
 
-    private function cacheKey(): string
+    private function cacheKey(?int $storeId = null): string
     {
         // Provider labels embed the configured model (e.g. "Claude (claude-sonnet-4-6)"),
         // so enabling/disabling a provider or switching its model invalidates the cache.
@@ -324,8 +344,9 @@ class BrandVisibilityService
         ));
 
         return self::CACHE_PREFIX . md5(
-            $this->config->getBrandName() .
-            $this->config->getBrandDomain() .
+            (string) $storeId .
+            $this->config->getBrandName($storeId) .
+            $this->config->getBrandDomain($storeId) .
             implode(',', array_keys($this->config->getActivePrompts())) .
             $providerSignature .
             $this->config->getSystemPrompt()

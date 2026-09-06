@@ -14,11 +14,13 @@
             "errors_count": true,
             "from_cache": true,
             "created_at": true,
-            "share_of_voice": true
+            "share_of_voice": true,
+            "store_id": true
         },
         "index": {
             "ANGEO_BRAND_VISIBILITY_AUDIT_CREATED_AT": true,
-            "ANGEO_BRAND_VISIBILITY_AUDIT_OVERALL_SCORE": true
+            "ANGEO_BRAND_VISIBILITY_AUDIT_OVERALL_SCORE": true,
+            "ANGEO_BRAND_VIS_STORE_ID": true
         },
         "constraint": {
             "PRIMARY": true

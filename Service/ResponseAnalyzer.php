@@ -53,6 +53,9 @@ class ResponseAnalyzer
     public function __construct(
         private readonly Config $config,
         private readonly PhrasePack $phrasePack,
+        // Optional (since 3.0.0). Only consulted when sentiment mode is 'llm';
+        // null keeps the analyzer a pure, deterministic string function.
+        private readonly ?SentimentJudge $sentimentJudge = null,
     ) {
     }
 
@@ -65,19 +68,19 @@ class ResponseAnalyzer
      *     cited_domains: string[]
      * }
      */
-    public function analyse(string $rawResponse, array $citations = []): array
+    public function analyse(string $rawResponse, array $citations = [], ?int $storeId = null): array
     {
         $text         = mb_strtolower($rawResponse);
         $citationText = mb_strtolower(implode("\n", $citations));
-        $terms        = $this->buildSearchTerms();
+        $terms        = $this->buildSearchTerms($storeId);
 
-        $signals = $this->extractSignals($text, $terms, $citationText);
+        $signals = $this->extractSignals($text, $terms, $citationText, $storeId, $rawResponse);
         $score   = $this->calculateScore($signals);
 
         return [
             'signals'             => $signals,
             'score'               => $score,
-            'competitor_mentions' => $this->detectCompetitors($text, $citationText),
+            'competitor_mentions' => $this->detectCompetitors($text, $citationText, $storeId),
             'cited_domains'       => $this->extractDomains($text . "\n" . $citationText),
         ];
     }
@@ -85,21 +88,26 @@ class ResponseAnalyzer
     // ── Private ─────────────────────────────────────────────────────────
 
     /** @return string[] lowercase whole-word terms to search */
-    private function buildSearchTerms(): array
+    private function buildSearchTerms(?int $storeId = null): array
     {
         return array_values(array_filter(array_unique(array_map(
             'mb_strtolower',
             array_merge(
-                [$this->config->getBrandName()],
-                $this->config->getBrandKeywords()
+                [$this->config->getBrandName($storeId)],
+                $this->config->getBrandKeywords($storeId)
             )
         ))));
     }
 
     /** @return array<string, bool> */
-    private function extractSignals(string $text, array $terms, string $citationText = ''): array
-    {
-        $domain   = mb_strtolower($this->config->getBrandDomain());
+    private function extractSignals(
+        string $text,
+        array $terms,
+        string $citationText = '',
+        ?int $storeId = null,
+        string $rawResponse = ''
+    ): array {
+        $domain   = mb_strtolower($this->config->getBrandDomain($storeId));
         $domainNw = $domain !== '' ? (string) preg_replace('/^www\./', '', $domain) : '';
 
         $firstPos  = $this->firstWordPosition($text, $terms);
@@ -123,7 +131,7 @@ class ResponseAnalyzer
             return $signals;
         }
 
-        $languages = $this->config->getAnalysisLanguages();
+        $languages = $this->config->getAnalysisLanguages($storeId);
         $recPhrases = $this->phrasePack->recommendationPhrases($languages);
         $posPhrases = $this->phrasePack->positivePhrases($languages);
 
@@ -139,7 +147,12 @@ class ResponseAnalyzer
         $windows = $this->mentionWindows($text, $terms, $domainNw !== '' ? $domainNw : $domain);
         $signals['recommended']        = $this->windowsContainAny($windows, $recPhrases)
                                       || $this->appearsAsListItem($text, $terms);
-        $signals['positive_sentiment'] = $this->windowsContainAny($windows, $posPhrases);
+        $signals['positive_sentiment'] = $this->detectSentiment(
+            $windows,
+            $posPhrases,
+            $rawResponse,
+            $this->config->getBrandName($storeId)
+        );
 
         return $signals;
     }
@@ -251,10 +264,10 @@ class ResponseAnalyzer
      *
      * @return array<string, bool> competitor display name => mentioned
      */
-    private function detectCompetitors(string $text, string $citationText): array
+    private function detectCompetitors(string $text, string $citationText, ?int $storeId = null): array
     {
         $mentions = [];
-        foreach ($this->config->getCompetitors() as $competitor) {
+        foreach ($this->config->getCompetitors($storeId) as $competitor) {
             $name   = mb_strtolower($competitor['name']);
             $domain = $competitor['domain'];
             $key    = $competitor['name'] !== '' ? $competitor['name'] : $competitor['domain'];
@@ -293,6 +306,30 @@ class ResponseAnalyzer
         $domains = array_values(array_unique(array_map('strtolower', $m[1])));
 
         return array_slice($domains, 0, 25);
+    }
+
+    /**
+     * Positive-sentiment decision. In 'llm' mode the configured judge reads
+     * the whole answer and returns a verdict; a null verdict (judge disabled,
+     * unavailable, or unparseable) falls back to phrase-window detection so
+     * behaviour degrades gracefully.
+     *
+     * @param string[] $windows
+     * @param string[] $posPhrases
+     */
+    private function detectSentiment(array $windows, array $posPhrases, string $rawResponse, string $brand): bool
+    {
+        if ($this->sentimentJudge !== null
+            && $this->config->getSentimentMode() === 'llm'
+            && $rawResponse !== ''
+        ) {
+            $verdict = $this->sentimentJudge->isPositive($rawResponse, $brand);
+            if ($verdict !== null) {
+                return $verdict;
+            }
+        }
+
+        return $this->windowsContainAny($windows, $posPhrases);
     }
 
     /** @param array<string, bool> $signals */

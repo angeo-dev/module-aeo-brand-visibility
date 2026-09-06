@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Angeo\AeoBrandVisibility\Model;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\ScopeInterface;
 
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Store\Model\StoreManagerInterface;
@@ -100,40 +101,67 @@ class Config
     // ── Cron ───────────────────────────────────────────────────────────────
     private const XML_CRON_ENABLED        = 'angeo_brand_vis/cron/enabled';
 
+    // ── Alerting (since 3.0.0) ─────────────────────────────────────────────
+    private const XML_ALERT_ENABLED       = 'angeo_brand_vis/alerting/enabled';
+    private const XML_ALERT_RECIPIENT     = 'angeo_brand_vis/alerting/recipient';
+    private const XML_ALERT_DROP          = 'angeo_brand_vis/alerting/drop_threshold';
+    private const XML_ALERT_SENDER        = 'angeo_brand_vis/alerting/sender_identity';
+
+    // ── Sentiment (since 3.0.0) ────────────────────────────────────────────
+    private const XML_SENTIMENT_MODE      = 'angeo_brand_vis/analysis/sentiment_mode';
+
     public function __construct(
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly EncryptorInterface   $encryptor,
         private readonly StoreManagerInterface $storeManager
     ) {}
 
-    // ── General ────────────────────────────────────────────────────────────
-
-    public function isEnabled(): bool
+    /**
+     * Scope-aware value read (since 3.0.0). When $storeId is given, the value
+     * is read at that store view; otherwise the default scope is used. Brand
+     * identity (name, domain, keywords, category, competitors) can differ per
+     * store view — a multi-market Magento install has a different brand recall
+     * problem per locale.
+     */
+    private function scopeValue(string $path, ?int $storeId): mixed
     {
-        return $this->scopeConfig->isSetFlag(self::XML_ENABLED);
+        if ($storeId === null) {
+            return $this->scopeConfig->getValue($path);
+        }
+        return $this->scopeConfig->getValue($path, ScopeInterface::SCOPE_STORE, $storeId);
     }
 
-    public function getBrandName(): string
+    // ── General ────────────────────────────────────────────────────────────
+
+    public function isEnabled(?int $storeId = null): bool
     {
-        $name = (string) $this->scopeConfig->getValue(self::XML_BRAND_NAME);
+        if ($storeId === null) {
+            return $this->scopeConfig->isSetFlag(self::XML_ENABLED);
+        }
+        return $this->scopeConfig->isSetFlag(self::XML_ENABLED, ScopeInterface::SCOPE_STORE, $storeId);
+    }
+
+    public function getBrandName(?int $storeId = null): string
+    {
+        $name = (string) $this->scopeValue(self::XML_BRAND_NAME, $storeId);
         if ($name !== '') {
             return $name;
         }
         try {
-            return $this->storeManager->getStore()->getName();
+            return $this->storeManager->getStore($storeId)->getName();
         } catch (\Throwable) {
             return '';
         }
     }
 
-    public function getBrandDomain(): string
+    public function getBrandDomain(?int $storeId = null): string
     {
-        $domain = (string) $this->scopeConfig->getValue(self::XML_BRAND_DOMAIN);
+        $domain = (string) $this->scopeValue(self::XML_BRAND_DOMAIN, $storeId);
         if ($domain !== '') {
             return rtrim($domain, '/');
         }
         try {
-            $url = $this->storeManager->getStore()->getBaseUrl();
+            $url = $this->storeManager->getStore($storeId)->getBaseUrl();
             return parse_url($url, PHP_URL_HOST) ?: '';
         } catch (\Throwable) {
             return '';
@@ -141,21 +169,21 @@ class Config
     }
 
     /** @return string[] */
-    public function getBrandKeywords(): array
+    public function getBrandKeywords(?int $storeId = null): array
     {
-        $raw = (string) $this->scopeConfig->getValue(self::XML_BRAND_KEYWORDS);
+        $raw = (string) $this->scopeValue(self::XML_BRAND_KEYWORDS, $storeId);
         return array_filter(array_map('trim', explode(',', $raw)));
     }
 
-    public function getStoreCategory(): string
+    public function getStoreCategory(?int $storeId = null): string
     {
-        return (string) $this->scopeConfig->getValue(self::XML_STORE_CATEGORY);
+        return (string) $this->scopeValue(self::XML_STORE_CATEGORY, $storeId);
     }
 
     /** @return string[] */
-    public function getTopProducts(): array
+    public function getTopProducts(?int $storeId = null): array
     {
-        $raw = (string) $this->scopeConfig->getValue(self::XML_TOP_PRODUCTS);
+        $raw = (string) $this->scopeValue(self::XML_TOP_PRODUCTS, $storeId);
         return array_filter(array_map('trim', explode("\n", $raw)));
     }
 
@@ -317,9 +345,9 @@ class Config
      * Optional language instruction for prompt templates via {{language}}
      * (since 1.3.0). Empty = placeholder replaced with "English".
      */
-    public function getQueryLanguage(): string
+    public function getQueryLanguage(?int $storeId = null): string
     {
-        return trim((string) $this->scopeConfig->getValue(self::XML_Q_QUERY_LANGUAGE)) ?: 'English';
+        return trim((string) $this->scopeValue(self::XML_Q_QUERY_LANGUAGE, $storeId)) ?: 'English';
     }
 
     /**
@@ -348,9 +376,9 @@ class Config
      *
      * @return array<int, array{name: string, domain: string}>
      */
-    public function getCompetitors(): array
+    public function getCompetitors(?int $storeId = null): array
     {
-        $raw = (string) $this->scopeConfig->getValue(self::XML_A_COMPETITORS);
+        $raw = (string) $this->scopeValue(self::XML_A_COMPETITORS, $storeId);
         $competitors = [];
 
         foreach (array_filter(array_map('trim', explode("\n", $raw))) as $line) {
@@ -393,9 +421,9 @@ class Config
      *
      * @return string[] PhrasePack::LANG_* codes
      */
-    public function getAnalysisLanguages(): array
+    public function getAnalysisLanguages(?int $storeId = null): array
     {
-        $raw = (string) $this->scopeConfig->getValue(self::XML_A_LANGUAGES);
+        $raw = (string) $this->scopeValue(self::XML_A_LANGUAGES, $storeId);
         return array_values(array_filter(array_map('trim', explode(',', $raw))));
     }
 
@@ -448,16 +476,16 @@ class Config
         return array_slice($prompts, 0, $max, true);
     }
 
-    public function buildPrompt(string $template): string
+    public function buildPrompt(string $template, ?int $storeId = null): string
     {
         return str_replace(
             ['{{brand}}', '{{domain}}', '{{category}}', '{{products}}', '{{language}}'],
             [
-                $this->getBrandName(),
-                $this->getBrandDomain(),
-                $this->getStoreCategory(),
-                implode(', ', array_slice($this->getTopProducts(), 0, 3)),
-                $this->getQueryLanguage(),
+                $this->getBrandName($storeId),
+                $this->getBrandDomain($storeId),
+                $this->getStoreCategory($storeId),
+                implode(', ', array_slice($this->getTopProducts($storeId), 0, 3)),
+                $this->getQueryLanguage($storeId),
             ],
             $template
         );
@@ -493,6 +521,53 @@ class Config
     public function isCronEnabled(): bool
     {
         return $this->scopeConfig->isSetFlag(self::XML_CRON_ENABLED);
+    }
+
+    // ── Alerting (since 3.0.0) ─────────────────────────────────────────────
+
+    public function isAlertingEnabled(): bool
+    {
+        return $this->scopeConfig->isSetFlag(self::XML_ALERT_ENABLED);
+    }
+
+    /** @return string[] parsed, trimmed, de-duplicated recipient emails */
+    public function getAlertRecipients(): array
+    {
+        $raw = (string) $this->scopeConfig->getValue(self::XML_ALERT_RECIPIENT);
+        $emails = array_filter(
+            array_map('trim', preg_split('/[,;\s]+/', $raw) ?: []),
+            static fn($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL)
+        );
+        return array_values(array_unique($emails));
+    }
+
+    /**
+     * Minimum score drop (points, vs the previous run) that triggers an alert.
+     * Default 10.
+     */
+    public function getAlertDropThreshold(): int
+    {
+        $value = (int) $this->scopeConfig->getValue(self::XML_ALERT_DROP);
+        return max(1, $value ?: 10);
+    }
+
+    public function getAlertSenderIdentity(): string
+    {
+        return (string) $this->scopeConfig->getValue(self::XML_ALERT_SENDER) ?: 'general';
+    }
+
+    // ── Sentiment (since 3.0.0) ────────────────────────────────────────────
+
+    /**
+     * 'phrase' (default) uses the multilingual phrase packs. 'llm' asks the
+     * cheapest enabled provider to classify sentiment as JSON, falling back to
+     * phrase packs on any failure. LLM judging is more accurate across
+     * languages but costs one extra call per analysed answer.
+     */
+    public function getSentimentMode(): string
+    {
+        $mode = (string) $this->scopeConfig->getValue(self::XML_SENTIMENT_MODE);
+        return in_array($mode, ['phrase', 'llm'], true) ? $mode : 'phrase';
     }
 
     // ── Private ────────────────────────────────────────────────────────────

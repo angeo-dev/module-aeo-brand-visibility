@@ -2,6 +2,12 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
+    <!-- REST API (since 3.0.0) -->
+    <preference for="Angeo\AeoBrandVisibility\Api\ReportManagementInterface"
+                type="Angeo\AeoBrandVisibility\Model\ReportManagement"/>
+    <preference for="Angeo\AeoBrandVisibility\Api\Data\VisibilitySummaryInterface"
+                type="Angeo\AeoBrandVisibility\Model\VisibilitySummary"/>
+
     <!-- Dedicated logger -->
     <virtualType name="Angeo\AeoBrandVisibility\Logger\Handler" type="Magento\Framework\Logger\Handler\Base">
         <arguments>
@@ -19,6 +25,7 @@
     <type name="Angeo\AeoBrandVisibility\Service\BrandVisibilityService">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+            <argument name="alerting" xsi:type="object">Angeo\AeoBrandVisibility\Service\AlertDispatcher</argument>
             <!-- Provider registry (since 2.0.0). Third-party modules add
                  providers here by implementing AiProviderInterface — no core
                  changes needed. Order defines report/UI ordering. -->
@@ -29,6 +36,33 @@
                 <item name="gemini"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider</item>
                 <item name="groq"       xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GroqProvider</item>
             </argument>
+        </arguments>
+    </type>
+
+    <!-- Sentiment judge shares the same provider registry (since 3.0.0) -->
+    <type name="Angeo\AeoBrandVisibility\Service\SentimentJudge">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+            <argument name="providers" xsi:type="array">
+                <item name="chatgpt"    xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider</item>
+                <item name="claude"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider</item>
+                <item name="perplexity" xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\PerplexityProvider</item>
+                <item name="gemini"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider</item>
+                <item name="groq"       xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GroqProvider</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Angeo\AeoBrandVisibility\Service\AlertDispatcher">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+
+    <!-- Wire the optional collaborators onto the service and analyzer -->
+    <type name="Angeo\AeoBrandVisibility\Service\ResponseAnalyzer">
+        <arguments>
+            <argument name="sentimentJudge" xsi:type="object">Angeo\AeoBrandVisibility\Service\SentimentJudge</argument>
         </arguments>
     </type>
 

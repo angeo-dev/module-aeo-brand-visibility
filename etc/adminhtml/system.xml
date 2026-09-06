@@ -350,6 +350,11 @@
                     <label>Competitor Watch-list (Share of Voice)</label>
                     <comment><![CDATA[One competitor per line: <code>Name | domain.tld</code>, or a bare name, or a bare domain. Every answer to "what are the best stores?" names the competition — the report shows how often each watched competitor appears next to you, which turns an abstract score into "who exactly is outranking us".]]></comment>
                 </field>
+                <field id="sentiment_mode" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Sentiment Analysis</label>
+                    <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\SentimentMode</source_model>
+                    <comment><![CDATA[<strong>Phrase packs</strong> (default): fast, deterministic, free. <strong>LLM judge</strong>: the cheapest enabled provider reads each answer in context and classifies sentiment — more accurate across languages and paraphrase, but adds one API call per analysed answer. Falls back to phrase packs automatically on any failure.]]></comment>
+                </field>
             </group>
 
             <!-- ── SCORING ── -->
@@ -385,6 +390,35 @@
             </group>
 
             <!-- ── CRON ── -->
+            <!-- ── ALERTING (since 3.0.0) ── -->
+            <group id="alerting" translate="label comment" sortOrder="55"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Alerting</label>
+                <comment>Email notifications when a scheduled audit drops or a competitor overtakes you.</comment>
+                <field id="enabled" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Email Alerts</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Alerts fire only on scheduled (cron/CLI) runs, never on manual admin previews.</comment>
+                </field>
+                <field id="recipient" type="textarea" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Recipients</label>
+                    <comment>One or more email addresses, comma/space separated.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="drop_threshold" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Score Drop Threshold</label>
+                    <comment>Minimum drop (points) versus the previous run that triggers an alert. Default: 10. A new competitor overtaking you in share of voice always alerts regardless of this value.</comment>
+                    <validate>validate-digits validate-greater-than-zero</validate>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="sender_identity" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Email Sender</label>
+                    <source_model>Magento\Config\Model\Config\Source\Email\Identity</source_model>
+                    <comment>Which store email identity the alert is sent from. Default: General Contact.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+
             <group id="cron" translate="label" sortOrder="60"
                    showInDefault="1" showInWebsite="0" showInStore="0">
                 <label>Cron Schedule</label>

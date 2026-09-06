@@ -5,6 +5,70 @@ All notable changes to `angeo/module-aeo-brand-visibility` will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] — 2026-07-03
+
+The systems release: from a single-store measurement tool to a per-store,
+alerting, API-exposed system with an evidence tie-in to the audit module.
+**Breaking:** requires `angeo/module-aeo-audit` ^4.0 (was ^3.0||^4.0).
+
+### Added
+
+- **Per-store-view scoping.** Brand name, domain, keywords, category,
+  competitors, analysis languages and query language are all read at store
+  scope. `BrandVisibilityService::run()` takes an optional `$storeId`; the
+  cache key, the persisted record (`store_id` column) and the audit checker
+  all carry it. A multi-market install now gets an independent score, trend
+  and alerting baseline per locale. The scheduled cron iterates every store
+  view that enables the module at its own scope (falling back to a single
+  default-scope run — pre-3.0 behaviour — when none do).
+- **Email alerting.** When a scheduled run drops by more than the configured
+  threshold (default 10 points) versus the previous run for the same scope,
+  or a competitor newly overtakes you in share of voice, `AlertDispatcher`
+  emails the configured recipients. Alerts fire on cron/CLI runs only, never
+  on interactive admin previews. Configurable under *Brand Visibility →
+  Alerting*; ships an adminhtml email template.
+- **REST API.** `GET /V1/angeo/brand-visibility/latest` and
+  `…/latest/store/:storeId` return the newest persisted summary (score,
+  grade, brand, share-of-voice JSON, timestamp) for headless storefronts and
+  external dashboards. Backed by `ReportManagementInterface` /
+  `VisibilitySummaryInterface`, guarded by the `Angeo_AeoBrandVisibility::run`
+  ACL resource.
+- **Optional LLM-judge sentiment.** *Response Analysis → Sentiment Analysis*
+  can switch from phrase packs to an LLM judge: the cheapest enabled provider
+  reads each answer in context and classifies sentiment as JSON. More
+  accurate across languages and paraphrase; falls back to phrase packs
+  automatically on any failure, so availability never depends on it.
+- **Evidence tie-in with aeo-audit v4.** When brand visibility is weak AND
+  the store's own bot-hit instrumentation shows the SEARCH-class crawlers
+  (OAI-SearchBot, PerplexityBot, …) never arrived, the checker stops guessing
+  and points the operator at the `waf_reality` / `ai_crawler_activity`
+  signals — low visibility caused by a WAF/CDN blocking crawlers is a
+  different fix from thin content.
+
+### Changed
+
+- **`angeo/module-aeo-audit` constraint tightened to `^4.0`** — the evidence
+  tie-in uses the v4 bot-hit resource and registry.
+- `BrandVisibilityService`, `ResponseAnalyzer`, `AuditResultRepository` and
+  `BrandVisibilityChecker` gained optional `?int $storeId` parameters
+  throughout. All are additive with null defaults — existing call sites keep
+  working.
+
+### Database
+
+- New nullable `store_id` column (+ index) on `angeo_brand_visibility_audit`
+  (declarative schema — applied by `setup:upgrade`). No data migration; older
+  rows carry a null store scope.
+
+### Upgrading from 2.x
+
+1. Ensure `angeo/module-aeo-audit` is on `^4.0`, then
+   `composer require angeo/module-aeo-brand-visibility:^3.0`.
+2. `bin/magento setup:upgrade && bin/magento setup:di:compile`.
+3. Optional: set per-store brand values, enable *Alerting* with recipients,
+   switch *Sentiment Analysis* to the LLM judge, and consume the REST
+   endpoint from your dashboard.
+
 ## [2.0.0] — 2026-07-03
 
 The measurement-validity release. Until now 4 of 5 providers measured
