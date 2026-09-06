@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Email:etc/email_templates.xsd">
-    <template id="angeo_brand_vis_alert"
-              label="Angeo Brand Visibility Alert"
-              file="alert.html"
-              type="html"
-              module="Angeo_AeoBrandVisibility"
-              area="adminhtml"/>
+    <template id="angeo_brand_vis_alert" label="Brand Visibility Regression Alert"
+              file="alert.html" type="html" module="Angeo_AeoBrandVisibility" area="adminhtml"/>
 </config>

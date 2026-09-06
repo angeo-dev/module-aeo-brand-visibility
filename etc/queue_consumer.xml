@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/consumer.xsd">
+    <consumer name="angeoBrandVisAuditRun"
+              queue="angeo.brandvis.audit.run"
+              connection="db"
+              maxMessages="10"
+              handler="Angeo\AeoBrandVisibility\MessageQueue\AuditRunConsumer::process"/>
+</config>

@@ -1,666 +1,811 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
 
 declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model;
 
+use Angeo\AeoBrandVisibility\Service\StoreContextResolver;
 use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Store\Model\ScopeInterface;
-
 use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
- * Central config accessor for Angeo_AeoBrandVisibility.
+ * Store-scoped configuration accessor for Angeo_AeoBrandVisibility.
  *
- * Fully standalone — all AI provider credentials and model settings
- * are owned by this module. No dependency on other Angeo modules.
+ * Provider settings are read generically from angeo_brand_vis/<providerId>/<key>,
+ * so a new provider only needs a system.xml group and a di.xml pool entry.
  */
 class Config
 {
-    // ── General ────────────────────────────────────────────────────────────
-    private const XML_ENABLED          = 'angeo_brand_vis/general/enabled';
-    private const XML_BRAND_NAME       = 'angeo_brand_vis/general/brand_name';
-    private const XML_BRAND_DOMAIN     = 'angeo_brand_vis/general/brand_domain';
-    private const XML_BRAND_KEYWORDS   = 'angeo_brand_vis/general/brand_keywords';
-    private const XML_STORE_CATEGORY   = 'angeo_brand_vis/general/store_category';
-    private const XML_TOP_PRODUCTS     = 'angeo_brand_vis/general/top_products';
-    private const XML_LOG_ENABLED      = 'angeo_brand_vis/general/log_enabled';
-    private const XML_CACHE_TTL        = 'angeo_brand_vis/general/cache_ttl_hours';
+    public const SECTION = 'angeo_brand_vis';
 
-    // ── ChatGPT ────────────────────────────────────────────────────────────
-    private const XML_GPT_ENABLED      = 'angeo_brand_vis/chatgpt/enabled';
-    private const XML_GPT_API_KEY      = 'angeo_brand_vis/chatgpt/api_key';
-    private const XML_GPT_MODEL        = 'angeo_brand_vis/chatgpt/model';
-    private const XML_GPT_MAX_TOKENS   = 'angeo_brand_vis/chatgpt/max_tokens';
-    private const XML_GPT_TEMPERATURE  = 'angeo_brand_vis/chatgpt/temperature';
-    private const XML_GPT_TIMEOUT      = 'angeo_brand_vis/chatgpt/timeout';
-    private const XML_GPT_GROUNDED     = 'angeo_brand_vis/chatgpt/grounded';
-
-    // ── Claude ─────────────────────────────────────────────────────────────
-    private const XML_CLAUDE_ENABLED   = 'angeo_brand_vis/claude/enabled';
-    private const XML_CLAUDE_API_KEY   = 'angeo_brand_vis/claude/api_key';
-    private const XML_CLAUDE_MODEL     = 'angeo_brand_vis/claude/model';
-    private const XML_CLAUDE_MAX_TOKENS= 'angeo_brand_vis/claude/max_tokens';
-    private const XML_CLAUDE_TIMEOUT   = 'angeo_brand_vis/claude/timeout';
-    private const XML_CLAUDE_GROUNDED  = 'angeo_brand_vis/claude/grounded';
-
-    // ── Perplexity ─────────────────────────────────────────────────────────
-    private const XML_PPX_ENABLED      = 'angeo_brand_vis/perplexity/enabled';
-    private const XML_PPX_API_KEY      = 'angeo_brand_vis/perplexity/api_key';
-    private const XML_PPX_MODEL        = 'angeo_brand_vis/perplexity/model';
-    private const XML_PPX_MAX_TOKENS   = 'angeo_brand_vis/perplexity/max_tokens';
-    private const XML_PPX_TIMEOUT      = 'angeo_brand_vis/perplexity/timeout';
-
-
-    // ── Gemini ─────────────────────────────────────────────────────────────
-    private const XML_GEMINI_ENABLED    = 'angeo_brand_vis/gemini/enabled';
-    private const XML_GEMINI_API_KEY    = 'angeo_brand_vis/gemini/api_key';
-    private const XML_GEMINI_MODEL      = 'angeo_brand_vis/gemini/model';
-    private const XML_GEMINI_MAX_TOKENS = 'angeo_brand_vis/gemini/max_tokens';
-    private const XML_GEMINI_TIMEOUT    = 'angeo_brand_vis/gemini/timeout';
-    // ── Groq ───────────────────────────────────────────────────────────────
-    private const XML_GROQ_ENABLED    = 'angeo_brand_vis/groq/enabled';
-    private const XML_GROQ_API_KEY    = 'angeo_brand_vis/groq/api_key';
-    private const XML_GROQ_MODEL      = 'angeo_brand_vis/groq/model';
-    private const XML_GROQ_MAX_TOKENS = 'angeo_brand_vis/groq/max_tokens';
-    private const XML_GROQ_TIMEOUT    = 'angeo_brand_vis/groq/timeout';
-
-    // ── Queries ────────────────────────────────────────────────────────────
-    private const XML_Q_MAX_PROMPTS        = 'angeo_brand_vis/queries/max_prompts_per_provider';
-    /** Legacy path (pre-1.3.0 name) — still read as a fallback so saved values survive the rename. */
-    private const XML_Q_QUERIES_PER_RUN    = 'angeo_brand_vis/queries/queries_per_provider';
-    private const XML_Q_QUERY_LANGUAGE     = 'angeo_brand_vis/queries/query_language';
-    private const XML_Q_DELAY_MS           = 'angeo_brand_vis/queries/delay_between_ms';
-    private const XML_Q_SYSTEM_PROMPT      = 'angeo_brand_vis/queries/system_prompt';
-    private const XML_Q_CUSTOM_PROMPTS     = 'angeo_brand_vis/queries/custom_prompts';
-
-    // Per-prompt-type toggles
-    private const XML_Q_RECOMMENDATION    = 'angeo_brand_vis/queries/prompt_recommendation';
-    private const XML_Q_CATEGORY          = 'angeo_brand_vis/queries/prompt_category';
-    private const XML_Q_BRAND_DIRECT      = 'angeo_brand_vis/queries/prompt_brand_direct';
-    private const XML_Q_PRODUCT_SEARCH    = 'angeo_brand_vis/queries/prompt_product_search';
-    private const XML_Q_COMPARISON        = 'angeo_brand_vis/queries/prompt_comparison';
-    private const XML_Q_GIFT_GUIDE        = 'angeo_brand_vis/queries/prompt_gift_guide';
-
-    // ── Analysis (since 1.3.0) ─────────────────────────────────────────────
-    private const XML_A_LANGUAGES          = 'angeo_brand_vis/analysis/languages';
-    // ── Analysis (since 2.0.0) ─────────────────────────────────────────────
-    private const XML_A_COMPETITORS        = 'angeo_brand_vis/analysis/competitors';
-    private const XML_Q_REPEATS            = 'angeo_brand_vis/queries/repeats_per_prompt';
-
-    // ── Scoring ────────────────────────────────────────────────────────────
-    private const XML_S_MENTIONED         = 'angeo_brand_vis/scoring/weight_mentioned';
-    private const XML_S_RECOMMENDED       = 'angeo_brand_vis/scoring/weight_recommended';
-    private const XML_S_URL_CITED         = 'angeo_brand_vis/scoring/weight_url_cited';
-    private const XML_S_FIRST_RESULT      = 'angeo_brand_vis/scoring/weight_first_result';
-    private const XML_S_POSITIVE          = 'angeo_brand_vis/scoring/weight_positive_sentiment';
-    private const XML_S_PASS_THRESHOLD    = 'angeo_brand_vis/scoring/pass_threshold';
-    private const XML_S_WARN_THRESHOLD    = 'angeo_brand_vis/scoring/warn_threshold';
-
-    // ── Cron ───────────────────────────────────────────────────────────────
-    private const XML_CRON_ENABLED        = 'angeo_brand_vis/cron/enabled';
-
-    // ── Alerting (since 3.0.0) ─────────────────────────────────────────────
-    private const XML_ALERT_ENABLED       = 'angeo_brand_vis/alerting/enabled';
-    private const XML_ALERT_RECIPIENT     = 'angeo_brand_vis/alerting/recipient';
-    private const XML_ALERT_DROP          = 'angeo_brand_vis/alerting/drop_threshold';
-    private const XML_ALERT_SENDER        = 'angeo_brand_vis/alerting/sender_identity';
-
-    // ── Sentiment (since 3.0.0) ────────────────────────────────────────────
-    private const XML_SENTIMENT_MODE      = 'angeo_brand_vis/analysis/sentiment_mode';
-
-    public function __construct(
-        private readonly ScopeConfigInterface $scopeConfig,
-        private readonly EncryptorInterface   $encryptor,
-        private readonly StoreManagerInterface $storeManager
-    ) {}
+    public const RUN_MODE_QUEUE = 'queue';
+    public const RUN_MODE_SYNC = 'sync';
 
     /**
-     * Scope-aware value read (since 3.0.0). When $storeId is given, the value
-     * is read at that store view; otherwise the default scope is used. Brand
-     * identity (name, domain, keywords, category, competitors) can differ per
-     * store view — a multi-market Magento install has a different brand recall
-     * problem per locale.
+     * Built-in prompt identifiers in the order they are offered.
      */
-    private function scopeValue(string $path, ?int $storeId): mixed
-    {
-        if ($storeId === null) {
-            return $this->scopeConfig->getValue($path);
-        }
-        return $this->scopeConfig->getValue($path, ScopeInterface::SCOPE_STORE, $storeId);
+    public const BUILT_IN_PROMPTS = [
+        'recommendation',
+        'category',
+        'brand_direct',
+        'product_search',
+        'comparison',
+        'gift_guide',
+    ];
+
+    private const XML_ENABLED = 'angeo_brand_vis/general/enabled';
+    private const XML_RUN_MODE = 'angeo_brand_vis/general/run_mode';
+    private const XML_BRAND_NAME = 'angeo_brand_vis/general/brand_name';
+    private const XML_BRAND_DOMAIN = 'angeo_brand_vis/general/brand_domain';
+    private const XML_BRAND_KEYWORDS = 'angeo_brand_vis/general/brand_keywords';
+    private const XML_STORE_CATEGORY = 'angeo_brand_vis/general/store_category';
+    private const XML_TOP_PRODUCTS = 'angeo_brand_vis/general/top_products';
+    private const XML_LOG_ENABLED = 'angeo_brand_vis/general/log_enabled';
+    private const XML_CACHE_TTL = 'angeo_brand_vis/general/cache_ttl_hours';
+
+    private const XML_MAX_PROMPTS = 'angeo_brand_vis/queries/max_prompts';
+    private const XML_SAMPLES = 'angeo_brand_vis/queries/samples';
+    private const XML_DELAY_MS = 'angeo_brand_vis/queries/delay_between_ms';
+    private const XML_MAX_RETRIES = 'angeo_brand_vis/queries/max_retries';
+    private const XML_SYSTEM_PROMPT = 'angeo_brand_vis/queries/system_prompt';
+    private const XML_CUSTOM_PROMPTS = 'angeo_brand_vis/queries/custom_prompts';
+
+    private const XML_PASS_THRESHOLD = 'angeo_brand_vis/scoring/pass_threshold';
+    private const XML_WARN_THRESHOLD = 'angeo_brand_vis/scoring/warn_threshold';
+    private const XML_NEGATIVE_PENALTY = 'angeo_brand_vis/scoring/negative_penalty';
+
+    private const XML_COMPETITORS = 'angeo_brand_vis/competitors/list';
+    private const XML_ANALYSIS_LANG = 'angeo_brand_vis/analysis/language';
+    private const XML_EXTRA_TLDS = 'angeo_brand_vis/analysis/extra_tlds';
+
+    private const XML_ALERT_ENABLED = 'angeo_brand_vis/alerts/enabled';
+    private const XML_ALERT_RECIPIENT = 'angeo_brand_vis/alerts/recipient';
+    private const XML_ALERT_DROP = 'angeo_brand_vis/alerts/drop_threshold';
+    private const XML_ALERT_WEBHOOK = 'angeo_brand_vis/alerts/webhook_url';
+    private const XML_ALERT_WEBHOOK_PRIVATE = 'angeo_brand_vis/alerts/webhook_allow_private';
+
+    private const XML_CRON_ENABLED = 'angeo_brand_vis/cron/enabled';
+
+    private const XML_RETENTION_MAX = 'angeo_brand_vis/retention/max_records_per_store';
+    private const XML_RETENTION_DAYS = 'angeo_brand_vis/retention/max_age_days';
+
+    private const DEFAULT_SCORING_WEIGHTS = [
+        'mentioned' => 1.0,
+        'recommended' => 1.5,
+        'url_cited' => 1.5,
+        'first_result' => 2.0,
+        'positive_sentiment' => 0.5,
+    ];
+
+    /**
+     * Store view the reads below resolve against. Null means default scope.
+     *
+     * @var int|null
+     */
+    private ?int $scopeStoreId = null;
+
+    /**
+     * @param ScopeConfigInterface $scopeConfig Scoped configuration reader.
+     * @param EncryptorInterface $encryptor Decrypts stored API keys.
+     * @param StoreManagerInterface $storeManager Resolves brand fallbacks from the store.
+     * @param StoreContextResolver $contextResolver Derives category and products from the catalogue.
+     */
+    public function __construct(
+        private readonly ScopeConfigInterface $scopeConfig,
+        private readonly EncryptorInterface $encryptor,
+        private readonly StoreManagerInterface $storeManager,
+        private readonly StoreContextResolver $contextResolver
+    ) {
     }
 
-    // ── General ────────────────────────────────────────────────────────────
-
-    public function isEnabled(?int $storeId = null): bool
+    /**
+     * Return a clone whose reads resolve against the given store view.
+     *
+     * @param int|null $storeId Store view id, or null for default scope.
+     * @return self
+     */
+    public function withStore(?int $storeId): self
     {
-        if ($storeId === null) {
-            return $this->scopeConfig->isSetFlag(self::XML_ENABLED);
-        }
-        return $this->scopeConfig->isSetFlag(self::XML_ENABLED, ScopeInterface::SCOPE_STORE, $storeId);
+        $clone = clone $this;
+        $clone->scopeStoreId = $storeId;
+
+        return $clone;
     }
 
-    public function getBrandName(?int $storeId = null): string
+    /**
+     * Store view this instance is scoped to.
+     *
+     * @return int|null
+     */
+    public function getScopeStoreId(): ?int
     {
-        $name = (string) $this->scopeValue(self::XML_BRAND_NAME, $storeId);
+        return $this->scopeStoreId;
+    }
+
+    /**
+     * Whether the brand visibility check is switched on.
+     *
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return $this->flag(self::XML_ENABLED);
+    }
+
+    /**
+     * Execution mode: queue (asynchronous consumer) or sync (inline).
+     *
+     * @return string
+     */
+    public function getRunMode(): string
+    {
+        return $this->stringValue(self::XML_RUN_MODE, self::RUN_MODE_QUEUE) === self::RUN_MODE_SYNC
+            ? self::RUN_MODE_SYNC
+            : self::RUN_MODE_QUEUE;
+    }
+
+    /**
+     * Brand name, falling back to the store name.
+     *
+     * @return string
+     */
+    public function getBrandName(): string
+    {
+        $name = $this->stringValue(self::XML_BRAND_NAME, '');
         if ($name !== '') {
             return $name;
         }
+
         try {
-            return $this->storeManager->getStore($storeId)->getName();
+            return (string) $this->resolveStore()->getName();
         } catch (\Throwable) {
             return '';
         }
     }
 
-    public function getBrandDomain(?int $storeId = null): string
+    /**
+     * Brand domain without scheme or trailing slash, falling back to the store base URL host.
+     *
+     * @return string
+     */
+    public function getBrandDomain(): string
     {
-        $domain = (string) $this->scopeValue(self::XML_BRAND_DOMAIN, $storeId);
+        $domain = $this->stringValue(self::XML_BRAND_DOMAIN, '');
         if ($domain !== '') {
-            return rtrim($domain, '/');
+            return $this->normaliseDomain($domain);
         }
+
         try {
-            $url = $this->storeManager->getStore($storeId)->getBaseUrl();
-            return parse_url($url, PHP_URL_HOST) ?: '';
+            $host = parse_url((string) $this->resolveStore()->getBaseUrl(), PHP_URL_HOST);
+
+            return is_string($host) ? $this->normaliseDomain($host) : '';
         } catch (\Throwable) {
             return '';
         }
     }
 
-    /** @return string[] */
-    public function getBrandKeywords(?int $storeId = null): array
+    /**
+     * Alternate brand names and misspellings.
+     *
+     * @return string[]
+     */
+    public function getBrandKeywords(): array
     {
-        $raw = (string) $this->scopeValue(self::XML_BRAND_KEYWORDS, $storeId);
-        return array_filter(array_map('trim', explode(',', $raw)));
+        return $this->splitList($this->stringValue(self::XML_BRAND_KEYWORDS, ''), ',');
     }
 
-    public function getStoreCategory(?int $storeId = null): string
+    /**
+     * What the store sells, derived from the catalogue when not set explicitly.
+     *
+     * @return string
+     */
+    public function getStoreCategory(): string
     {
-        return (string) $this->scopeValue(self::XML_STORE_CATEGORY, $storeId);
+        $explicit = $this->stringValue(self::XML_STORE_CATEGORY, '');
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        return $this->contextResolver->resolveCategoryPhrase($this->scopeStoreId);
     }
 
-    /** @return string[] */
-    public function getTopProducts(?int $storeId = null): array
+    /**
+     * Whether a usable category phrase is available for prompt building.
+     *
+     * @return bool
+     */
+    public function hasUsableCategory(): bool
     {
-        $raw = (string) $this->scopeValue(self::XML_TOP_PRODUCTS, $storeId);
-        return array_filter(array_map('trim', explode("\n", $raw)));
+        return $this->getStoreCategory() !== '';
     }
 
+    /**
+     * Product names used in product-search prompts.
+     *
+     * @return string[]
+     */
+    public function getTopProducts(): array
+    {
+        $list = $this->splitList($this->stringValue(self::XML_TOP_PRODUCTS, ''), "\n");
+        if ($list !== []) {
+            return $list;
+        }
+
+        return $this->contextResolver->resolveTopProducts($this->scopeStoreId);
+    }
+
+    /**
+     * Whether prompts and answers are written to the module log.
+     *
+     * @return bool
+     */
     public function isLogEnabled(): bool
     {
-        return $this->scopeConfig->isSetFlag(self::XML_LOG_ENABLED);
+        return $this->flag(self::XML_LOG_ENABLED);
     }
 
+    /**
+     * Result cache lifetime in hours. Zero disables caching.
+     *
+     * @return int
+     */
     public function getCacheTtlHours(): int
     {
-        $raw = $this->scopeConfig->getValue(self::XML_CACHE_TTL);
-        // Unset → default 24h. An explicit "0" disables caching and must be preserved.
-        if ($raw === null || $raw === '') {
-            return 24;
-        }
-        return max(0, (int) $raw);
+        return max(0, $this->intValue(self::XML_CACHE_TTL, 24));
     }
-
-    // ── ChatGPT ────────────────────────────────────────────────────────────
-
-    public function isGptEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_GPT_ENABLED);
-    }
-
-    public function getGptApiKey(): string
-    {
-        return $this->encryptor->decrypt(
-            (string) $this->scopeConfig->getValue(self::XML_GPT_API_KEY)
-        );
-    }
-
-    public function getGptModel(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_GPT_MODEL) ?: 'gpt-4o';
-    }
-
-    public function getGptMaxTokens(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_GPT_MAX_TOKENS) ?: 800;
-    }
-
-    public function getGptTemperature(): float
-    {
-        return (float) $this->scopeConfig->getValue(self::XML_GPT_TEMPERATURE) ?: 0.3;
-    }
-
-    public function getGptTimeout(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_GPT_TIMEOUT) ?: 45;
-    }
-
-    // ── Claude ─────────────────────────────────────────────────────────────
-
-    public function isClaudeEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_CLAUDE_ENABLED);
-    }
-
-    public function getClaudeApiKey(): string
-    {
-        return $this->encryptor->decrypt(
-            (string) $this->scopeConfig->getValue(self::XML_CLAUDE_API_KEY)
-        );
-    }
-
-    public function getClaudeModel(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_CLAUDE_MODEL) ?: 'claude-sonnet-4-6';
-    }
-
-    public function getClaudeMaxTokens(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_CLAUDE_MAX_TOKENS) ?: 800;
-    }
-
-    public function getClaudeTimeout(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_CLAUDE_TIMEOUT) ?: 60;
-    }
-
-    // ── Perplexity ─────────────────────────────────────────────────────────
-
-    public function isPerplexityEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_PPX_ENABLED);
-    }
-
-    public function getPerplexityApiKey(): string
-    {
-        return $this->encryptor->decrypt(
-            (string) $this->scopeConfig->getValue(self::XML_PPX_API_KEY)
-        );
-    }
-
-    public function getPerplexityModel(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_PPX_MODEL) ?: 'sonar';
-    }
-
-    public function getPerplexityMaxTokens(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_PPX_MAX_TOKENS) ?: 800;
-    }
-
-    public function getPerplexityTimeout(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_PPX_TIMEOUT) ?: 45;
-    }
-
-
-    // ── Gemini ─────────────────────────────────────────────────────────────
-
-    public function isGeminiEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_GEMINI_ENABLED);
-    }
-
-    public function getGeminiApiKey(): string
-    {
-        return $this->encryptor->decrypt(
-            (string) $this->scopeConfig->getValue(self::XML_GEMINI_API_KEY)
-        );
-    }
-
-    public function getGeminiModel(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_GEMINI_MODEL) ?: 'gemini-2.0-flash';
-    }
-
-    public function getGeminiMaxTokens(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_GEMINI_MAX_TOKENS) ?: 800;
-    }
-
-    public function getGeminiTimeout(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_GEMINI_TIMEOUT) ?: 45;
-    }
-
-    // ── Query settings ─────────────────────────────────────────────────────
 
     /**
-     * Maximum number of prompts sent to each provider per run.
+     * Whether the named provider is enabled and holds an API key.
      *
-     * Renamed in 1.3.0 (the old name "queries per provider" described the
-     * cap incorrectly — it limits PROMPTS, and total queries = prompts ×
-     * providers). The legacy config path is still honoured so values saved
-     * under the old field survive the upgrade.
+     * @param string $providerId Provider identifier.
+     * @return bool
      */
-    public function getQueriesPerProvider(): int
+    public function isProviderEnabled(string $providerId): bool
     {
-        $value = $this->scopeConfig->getValue(self::XML_Q_MAX_PROMPTS)
-            ?? $this->scopeConfig->getValue(self::XML_Q_QUERIES_PER_RUN);
-        return max(1, (int) $value ?: 3);
+        return $this->flag($this->providerPath($providerId, 'enabled'));
     }
 
     /**
-     * Optional language instruction for prompt templates via {{language}}
-     * (since 1.3.0). Empty = placeholder replaced with "English".
-     */
-    public function getQueryLanguage(?int $storeId = null): string
-    {
-        return trim((string) $this->scopeValue(self::XML_Q_QUERY_LANGUAGE, $storeId)) ?: 'English';
-    }
-
-    /**
-     * Live-search (grounded) mode toggles per provider (since 2.0.0).
-     * OFF by default: grounded calls cost more and behave differently —
-     * enabling them is an explicit measurement decision.
-     */
-    public function isGptGrounded(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_GPT_GROUNDED);
-    }
-
-    public function isClaudeGrounded(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_CLAUDE_GROUNDED);
-    }
-
-    public function isGeminiGrounded(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_GEMINI_GROUNDED);
-    }
-
-    /**
-     * Competitor watch-list for share-of-voice analysis (since 2.0.0).
-     * One per line: "Name | domain.tld", or a bare name, or a bare domain.
+     * Decrypted API key for a provider.
      *
-     * @return array<int, array{name: string, domain: string}>
+     * @param string $providerId Provider identifier.
+     * @return string
      */
-    public function getCompetitors(?int $storeId = null): array
+    public function getProviderApiKey(string $providerId): string
     {
-        $raw = (string) $this->scopeValue(self::XML_A_COMPETITORS, $storeId);
-        $competitors = [];
-
-        foreach (array_filter(array_map('trim', explode("\n", $raw))) as $line) {
-            $name = $line;
-            $domain = '';
-
-            if (str_contains($line, '|')) {
-                [$name, $domain] = array_map('trim', explode('|', $line, 2));
-            } elseif (str_contains($line, '.') && !str_contains($line, ' ')) {
-                // Bare domain — derive a display name from it.
-                $domain = $line;
-                $name = (string) preg_replace('/\.[a-z]{2,}$/i', '', preg_replace('/^www\./i', '', $line));
-            }
-
-            $domain = strtolower((string) preg_replace('#^https?://#i', '', rtrim($domain, '/')));
-            if ($name !== '' || $domain !== '') {
-                $competitors[] = ['name' => $name, 'domain' => $domain];
-            }
+        $stored = $this->stringValue($this->providerPath($providerId, 'api_key'), '');
+        if ($stored === '') {
+            return '';
         }
 
-        return $competitors;
+        return (string) $this->encryptor->decrypt($stored);
     }
 
     /**
-     * Attempts per prompt per provider (since 2.0.0). LLM answers are
-     * stochastic even at low temperature; the median of N attempts is a far
-     * stabler trend point than a single sample. Default 1 (cost-neutral
-     * upgrade); 3 recommended for weekly trend tracking.
-     */
-    public function getRepeatsPerPrompt(): int
-    {
-        $value = (int) $this->scopeConfig->getValue(self::XML_Q_REPEATS);
-        return min(5, max(1, $value ?: 1));
-    }
-
-    /**
-     * Language packs enabled for response analysis (since 1.3.0).
-     * Empty selection = all shipped packs (safe default: union matching
-     * across packs has no practical false-positive cost).
+     * Model identifier for a provider.
      *
-     * @return string[] PhrasePack::LANG_* codes
+     * @param string $providerId Provider identifier.
+     * @param string $default Fallback when unset.
+     * @return string
      */
-    public function getAnalysisLanguages(?int $storeId = null): array
+    public function getProviderModel(string $providerId, string $default = ''): string
     {
-        $raw = (string) $this->scopeValue(self::XML_A_LANGUAGES, $storeId);
-        return array_values(array_filter(array_map('trim', explode(',', $raw))));
+        return $this->stringValue($this->providerPath($providerId, 'model'), $default);
     }
 
+    /**
+     * Maximum answer length in tokens.
+     *
+     * @param string $providerId Provider identifier.
+     * @return int
+     */
+    public function getProviderMaxTokens(string $providerId): int
+    {
+        return max(64, $this->intValue($this->providerPath($providerId, 'max_tokens'), 800));
+    }
+
+    /**
+     * Sampling temperature. Zero is a legal value and is preserved.
+     *
+     * @param string $providerId Provider identifier.
+     * @return float
+     */
+    public function getProviderTemperature(string $providerId): float
+    {
+        return $this->floatValue($this->providerPath($providerId, 'temperature'), 0.3);
+    }
+
+    /**
+     * Request timeout in seconds.
+     *
+     * @param string $providerId Provider identifier.
+     * @return int
+     */
+    public function getProviderTimeout(string $providerId): int
+    {
+        return max(5, $this->intValue($this->providerPath($providerId, 'timeout'), 60));
+    }
+
+    /**
+     * Whether the provider should answer from live web search.
+     *
+     * @param string $providerId Provider identifier.
+     * @return bool
+     */
+    public function isGroundingEnabled(string $providerId): bool
+    {
+        return $this->flag($this->providerPath($providerId, 'grounding'));
+    }
+
+    /**
+     * Maximum number of prompts per provider. Zero means no cap.
+     *
+     * @return int
+     */
+    public function getMaxPrompts(): int
+    {
+        return max(0, $this->intValue(self::XML_MAX_PROMPTS, 3));
+    }
+
+    /**
+     * How many times each provider/prompt pair is repeated to average out model variance.
+     *
+     * @return int
+     */
+    public function getSamples(): int
+    {
+        return min(10, max(1, $this->intValue(self::XML_SAMPLES, 3)));
+    }
+
+    /**
+     * Pause between consecutive API calls, in milliseconds.
+     *
+     * @return int
+     */
     public function getDelayBetweenQueriesMs(): int
     {
-        return max(0, (int) $this->scopeConfig->getValue(self::XML_Q_DELAY_MS) ?: 500);
-    }
-
-    public function getSystemPrompt(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_Q_SYSTEM_PROMPT)
-            ?: 'You are a knowledgeable shopping assistant. Answer questions about online stores and products accurately. When you know a specific store, mention it by name and include its website URL.';
+        return max(0, $this->intValue(self::XML_DELAY_MS, 600));
     }
 
     /**
-     * Returns all active prompt templates keyed by prompt_key.
-     * Merges: built-in enabled prompts + any custom prompts from config.
+     * Retry attempts for a transient provider failure.
      *
-     * @return array<string, string>  [key => template]
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return min(5, max(0, $this->intValue(self::XML_MAX_RETRIES, 2)));
+    }
+
+    /**
+     * System instruction sent with every prompt.
+     *
+     * @return string
+     */
+    public function getSystemPrompt(): string
+    {
+        return $this->stringValue(
+            self::XML_SYSTEM_PROMPT,
+            'You are a knowledgeable shopping assistant. Answer questions about online stores and '
+            . 'products accurately. When you know a specific store, mention it by name and include '
+            . 'its website URL. Do not invent stores or URLs.'
+        );
+    }
+
+    /**
+     * Active prompt templates keyed by prompt identifier.
+     *
+     * @return array<string, string>
      */
     public function getActivePrompts(): array
     {
         $prompts = [];
 
-        $builtIn = $this->getBuiltInPrompts();
-        foreach ($builtIn as $key => $xmlPath) {
-            $override = (string) $this->scopeConfig->getValue($xmlPath);
-            if ($override !== '') {
-                $prompts[$key] = $override;
-            } elseif ($this->isPromptEnabled($key)) {
-                $prompts[$key] = $this->defaultPromptTextPublic($key);
+        foreach (self::BUILT_IN_PROMPTS as $key) {
+            if (!$this->isPromptEnabled($key)) {
+                continue;
+            }
+            $override = $this->stringValue('angeo_brand_vis/queries/prompt_' . $key, '');
+            $prompts[$key] = $override !== '' ? $override : $this->getDefaultPromptTemplate($key);
+        }
+
+        foreach ($this->splitList($this->stringValue(self::XML_CUSTOM_PROMPTS, ''), "\n") as $line) {
+            if (!str_contains($line, ':')) {
+                continue;
+            }
+            [$rawKey, $template] = explode(':', $line, 2);
+            $key = trim((string) preg_replace('/[^a-z0-9_]/', '_', strtolower(trim($rawKey))), '_');
+            $template = trim($template);
+            if ($key !== '' && $template !== '') {
+                $prompts[$key] = $template;
             }
         }
 
-        // Parse custom prompts block: one per line, format "key: template text"
-        $custom = (string) $this->scopeConfig->getValue(self::XML_Q_CUSTOM_PROMPTS);
-        foreach (array_filter(array_map('trim', explode("\n", $custom))) as $line) {
-            if (str_contains($line, ':')) {
-                [$k, $t] = explode(':', $line, 2);
-                $k = trim(preg_replace('/[^a-z0-9_]/', '_', strtolower(trim($k))));
-                $t = trim($t);
-                if ($k !== '' && $t !== '') {
-                    $prompts[$k] = $t;
-                }
-            }
+        $max = $this->getMaxPrompts();
+        if ($max > 0 && count($prompts) > $max) {
+            $prompts = array_slice($prompts, 0, $max, true);
         }
 
-        // Respect queries_per_provider cap
-        $max = $this->getQueriesPerProvider();
-        return array_slice($prompts, 0, $max, true);
+        return $prompts;
     }
 
-    public function buildPrompt(string $template, ?int $storeId = null): string
+    /**
+     * Replace placeholders in a prompt template with live store data.
+     *
+     * @param string $template Raw template text.
+     * @return string
+     */
+    public function buildPrompt(string $template): string
     {
         return str_replace(
-            ['{{brand}}', '{{domain}}', '{{category}}', '{{products}}', '{{language}}'],
+            ['{{brand}}', '{{domain}}', '{{category}}', '{{products}}'],
             [
-                $this->getBrandName($storeId),
-                $this->getBrandDomain($storeId),
-                $this->getStoreCategory($storeId),
-                implode(', ', array_slice($this->getTopProducts($storeId), 0, 3)),
-                $this->getQueryLanguage($storeId),
+                $this->getBrandName(),
+                $this->getBrandDomain(),
+                $this->getStoreCategory(),
+                implode(', ', array_slice($this->getTopProducts(), 0, 3)),
             ],
             $template
         );
     }
 
-    // ── Scoring ────────────────────────────────────────────────────────────
-
-    public function getScoringWeight(string $signal): float
+    /**
+     * Placeholder template for a built-in prompt.
+     *
+     * @param string $key Prompt identifier.
+     * @return string
+     */
+    public function getDefaultPromptTemplate(string $key): string
     {
-        $map = [
-            'mentioned'          => self::XML_S_MENTIONED,
-            'recommended'        => self::XML_S_RECOMMENDED,
-            'url_cited'          => self::XML_S_URL_CITED,
-            'first_result'       => self::XML_S_FIRST_RESULT,
-            'positive_sentiment' => self::XML_S_POSITIVE,
-        ];
-        $val = isset($map[$signal]) ? $this->scopeConfig->getValue($map[$signal]) : null;
-        return $val !== null ? (float) $val : $this->defaultWeight($signal);
-    }
-
-    public function getPassThreshold(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_S_PASS_THRESHOLD) ?: 60;
-    }
-
-    public function getWarnThreshold(): int
-    {
-        return (int) $this->scopeConfig->getValue(self::XML_S_WARN_THRESHOLD) ?: 30;
-    }
-
-    // ── Cron ───────────────────────────────────────────────────────────────
-
-    public function isCronEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_CRON_ENABLED);
-    }
-
-    // ── Alerting (since 3.0.0) ─────────────────────────────────────────────
-
-    public function isAlertingEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::XML_ALERT_ENABLED);
-    }
-
-    /** @return string[] parsed, trimmed, de-duplicated recipient emails */
-    public function getAlertRecipients(): array
-    {
-        $raw = (string) $this->scopeConfig->getValue(self::XML_ALERT_RECIPIENT);
-        $emails = array_filter(
-            array_map('trim', preg_split('/[,;\s]+/', $raw) ?: []),
-            static fn($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL)
-        );
-        return array_values(array_unique($emails));
+        return match ($key) {
+            'recommendation' => 'What are the best online stores to buy {{category}}? '
+                . 'List specific store names and their websites.',
+            'category' => 'Where can I buy {{category}} online? '
+                . 'Give specific recommendations with store names and URLs.',
+            'brand_direct' => 'Tell me about the {{brand}} online store. What do they sell, '
+                . 'what is their website, and would you recommend them?',
+            'product_search' => 'I am looking for {{products}} online. '
+                . 'Which stores do you recommend and why?',
+            'comparison' => 'Compare {{brand}} with other online stores selling {{category}}. '
+                . 'What are the pros and cons of each?',
+            'gift_guide' => 'I need gift ideas for someone who likes {{category}}. '
+                . 'Which online stores have the best selection?',
+            default => 'Tell me about online stores that sell {{category}}.',
+        };
     }
 
     /**
-     * Minimum score drop (points, vs the previous run) that triggers an alert.
-     * Default 10.
+     * Weight of one scoring signal.
+     *
+     * @param string $signal Signal identifier.
+     * @return float
+     */
+    public function getScoringWeight(string $signal): float
+    {
+        if (!isset(self::DEFAULT_SCORING_WEIGHTS[$signal])) {
+            return 0.0;
+        }
+
+        return max(0.0, $this->floatValue(
+            'angeo_brand_vis/scoring/weight_' . $signal,
+            self::DEFAULT_SCORING_WEIGHTS[$signal]
+        ));
+    }
+
+    /**
+     * Share of the earned score removed when the tone around the brand is negative.
+     *
+     * @return float
+     */
+    public function getNegativePenalty(): float
+    {
+        return min(1.0, max(0.0, $this->floatValue(self::XML_NEGATIVE_PENALTY, 0.5)));
+    }
+
+    /**
+     * Score at or above which the audit signal passes.
+     *
+     * @return int
+     */
+    public function getPassThreshold(): int
+    {
+        return $this->intValue(self::XML_PASS_THRESHOLD, 60);
+    }
+
+    /**
+     * Score at or above which the audit signal warns instead of failing.
+     *
+     * @return int
+     */
+    public function getWarnThreshold(): int
+    {
+        return $this->intValue(self::XML_WARN_THRESHOLD, 30);
+    }
+
+    /**
+     * Tracked competitors as name and optional domain pairs.
+     *
+     * @return array<int, array{name: string, domain: string}>
+     */
+    public function getCompetitors(): array
+    {
+        $out = [];
+        foreach ($this->splitList($this->stringValue(self::XML_COMPETITORS, ''), "\n") as $line) {
+            $parts = preg_split('/[|,]/', $line, 2) ?: [];
+            $name = trim((string) ($parts[0] ?? ''));
+            $domain = isset($parts[1]) ? $this->normaliseDomain(trim($parts[1])) : '';
+            if ($name !== '') {
+                $out[] = ['name' => $name, 'domain' => $domain];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Two-letter language used for phrase matching. Auto resolves from the store locale.
+     *
+     * @return string
+     */
+    public function getAnalysisLanguage(): string
+    {
+        $lang = $this->stringValue(self::XML_ANALYSIS_LANG, 'auto');
+        if ($lang !== '' && $lang !== 'auto') {
+            return strtolower(substr($lang, 0, 2));
+        }
+
+        $locale = $this->stringValue('general/locale/code', '');
+
+        return $locale !== '' ? strtolower(substr($locale, 0, 2)) : 'en';
+    }
+
+    /**
+     * Extra top-level domains recognised when checking URL attribution, e.g. nl, de, co.uk.
+     *
+     * @return string[]
+     */
+    public function getExtraTlds(): array
+    {
+        $out = [];
+        foreach ($this->splitList($this->stringValue(self::XML_EXTRA_TLDS, ''), ',') as $tld) {
+            $clean = strtolower(ltrim($tld, '.'));
+            if (preg_match('/^[a-z]{2,}(\.[a-z]{2,})?$/', $clean) === 1) {
+                $out[] = $clean;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Whether regression alerts are switched on.
+     *
+     * @return bool
+     */
+    public function isAlertEnabled(): bool
+    {
+        return $this->flag(self::XML_ALERT_ENABLED);
+    }
+
+    /**
+     * Alert recipient e-mail address.
+     *
+     * @return string
+     */
+    public function getAlertRecipient(): string
+    {
+        return $this->stringValue(self::XML_ALERT_RECIPIENT, '');
+    }
+
+    /**
+     * Point drop against the trailing average that triggers an alert.
+     *
+     * @return int
      */
     public function getAlertDropThreshold(): int
     {
-        $value = (int) $this->scopeConfig->getValue(self::XML_ALERT_DROP);
-        return max(1, $value ?: 10);
+        return max(1, $this->intValue(self::XML_ALERT_DROP, 10));
     }
-
-    public function getAlertSenderIdentity(): string
-    {
-        return (string) $this->scopeConfig->getValue(self::XML_ALERT_SENDER) ?: 'general';
-    }
-
-    // ── Sentiment (since 3.0.0) ────────────────────────────────────────────
 
     /**
-     * 'phrase' (default) uses the multilingual phrase packs. 'llm' asks the
-     * cheapest enabled provider to classify sentiment as JSON, falling back to
-     * phrase packs on any failure. LLM judging is more accurate across
-     * languages but costs one extra call per analysed answer.
+     * Optional webhook endpoint notified alongside the alert e-mail.
+     *
+     * @return string
      */
-    public function getSentimentMode(): string
+    public function getAlertWebhookUrl(): string
     {
-        $mode = (string) $this->scopeConfig->getValue(self::XML_SENTIMENT_MODE);
-        return in_array($mode, ['phrase', 'llm'], true) ? $mode : 'phrase';
+        return $this->stringValue(self::XML_ALERT_WEBHOOK, '');
     }
 
-    // ── Private ────────────────────────────────────────────────────────────
-
-    private function getBuiltInPrompts(): array
+    /**
+     * Whether the webhook may point at a private or reserved network address.
+     *
+     * @return bool
+     */
+    public function isWebhookPrivateAllowed(): bool
     {
-        return [
-            'recommendation' => self::XML_Q_RECOMMENDATION,
-            'category'       => self::XML_Q_CATEGORY,
-            'brand_direct'   => self::XML_Q_BRAND_DIRECT,
-            'product_search' => self::XML_Q_PRODUCT_SEARCH,
-            'comparison'     => self::XML_Q_COMPARISON,
-            'gift_guide'     => self::XML_Q_GIFT_GUIDE,
-        ];
+        return $this->flag(self::XML_ALERT_WEBHOOK_PRIVATE);
     }
 
+    /**
+     * Whether the scheduled audit is switched on.
+     *
+     * @return bool
+     */
+    public function isCronEnabled(): bool
+    {
+        return $this->flag(self::XML_CRON_ENABLED);
+    }
+
+    /**
+     * Rows kept per store scope before pruning.
+     *
+     * @return int
+     */
+    public function getMaxRecordsPerStore(): int
+    {
+        return max(10, $this->intValue(self::XML_RETENTION_MAX, 90));
+    }
+
+    /**
+     * Maximum age of a stored run, in days.
+     *
+     * @return int
+     */
+    public function getMaxAgeDays(): int
+    {
+        return max(7, $this->intValue(self::XML_RETENTION_DAYS, 365));
+    }
+
+    /**
+     * Whether a built-in prompt is switched on.
+     *
+     * @param string $key Prompt identifier.
+     * @return bool
+     */
     private function isPromptEnabled(string $key): bool
     {
-        // All built-in prompts enabled by default unless explicitly empty in config
-        $field = match ($key) {
-            'recommendation' => 'angeo_brand_vis/queries/enable_recommendation',
-            'category'       => 'angeo_brand_vis/queries/enable_category',
-            'brand_direct'   => 'angeo_brand_vis/queries/enable_brand_direct',
-            'product_search' => 'angeo_brand_vis/queries/enable_product_search',
-            'comparison'     => 'angeo_brand_vis/queries/enable_comparison',
-            'gift_guide'     => 'angeo_brand_vis/queries/enable_gift_guide',
-            default          => null,
-        };
-        if ($field === null) {
-            return false;
+        return $this->flag('angeo_brand_vis/queries/enable_' . $key);
+    }
+
+    /**
+     * Build a provider configuration path.
+     *
+     * @param string $providerId Provider identifier.
+     * @param string $key Field name.
+     * @return string
+     */
+    private function providerPath(string $providerId, string $key): string
+    {
+        return self::SECTION . '/' . $providerId . '/' . $key;
+    }
+
+    /**
+     * Raw scope-aware read.
+     *
+     * @param string $path Configuration path.
+     * @return mixed
+     */
+    private function rawValue(string $path): mixed
+    {
+        if ($this->scopeStoreId !== null) {
+            return $this->scopeConfig->getValue($path, ScopeInterface::SCOPE_STORE, $this->scopeStoreId);
         }
-        $val = $this->scopeConfig->getValue($field);
-        // Default on if config not yet set
-        return $val === null || (bool) $val;
+
+        return $this->scopeConfig->getValue($path);
     }
 
-    // ── Groq ───────────────────────────────────────────────────────────────
-
-    public function isGroqEnabled(): bool
+    /**
+     * Scope-aware boolean read.
+     *
+     * @param string $path Configuration path.
+     * @return bool
+     */
+    private function flag(string $path): bool
     {
-        return $this->scopeConfig->isSetFlag(self::XML_GROQ_ENABLED);
+        if ($this->scopeStoreId !== null) {
+            return $this->scopeConfig->isSetFlag($path, ScopeInterface::SCOPE_STORE, $this->scopeStoreId);
+        }
+
+        return $this->scopeConfig->isSetFlag($path);
     }
 
-    public function getGroqApiKey(): string
+    /**
+     * Scope-aware string read with a default applied only when the value is absent.
+     *
+     * @param string $path Configuration path.
+     * @param string $default Fallback value.
+     * @return string
+     */
+    private function stringValue(string $path, string $default): string
     {
-        return $this->encryptor->decrypt(
-            (string) $this->scopeConfig->getValue(self::XML_GROQ_API_KEY)
-        );
+        $value = $this->rawValue($path);
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        return trim((string) $value);
     }
 
-    public function getGroqModel(): string
+    /**
+     * Scope-aware integer read that preserves an explicit zero.
+     *
+     * @param string $path Configuration path.
+     * @param int $default Fallback value.
+     * @return int
+     */
+    private function intValue(string $path, int $default): int
     {
-        return (string) $this->scopeConfig->getValue(self::XML_GROQ_MODEL) ?: 'llama-3.3-70b-versatile';
+        $value = $this->rawValue($path);
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
     }
 
-    public function getGroqMaxTokens(): int
+    /**
+     * Scope-aware float read that preserves an explicit zero.
+     *
+     * @param string $path Configuration path.
+     * @param float $default Fallback value.
+     * @return float
+     */
+    private function floatValue(string $path, float $default): float
     {
-        return (int) $this->scopeConfig->getValue(self::XML_GROQ_MAX_TOKENS) ?: 800;
+        $value = $this->rawValue($path);
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (float) $value;
     }
 
-    public function getGroqTimeout(): int
+    /**
+     * Split a delimited admin field into trimmed, non-empty values.
+     *
+     * @param string $raw Raw field value.
+     * @param string $delimiter Delimiter character.
+     * @return string[]
+     */
+    private function splitList(string $raw, string $delimiter): array
     {
-        return (int) $this->scopeConfig->getValue(self::XML_GROQ_TIMEOUT) ?: 30;
+        if ($raw === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode($delimiter, $raw)), static fn($v) => $v !== ''));
     }
 
-    public function defaultPromptTextPublic(string $key): string
+    /**
+     * Strip scheme, www prefix, path and trailing slash from a domain.
+     *
+     * @param string $domain Raw domain or URL.
+     * @return string
+     */
+    private function normaliseDomain(string $domain): string
     {
-        $brand    = $this->getBrandName();
-        $category = $this->getStoreCategory() ?: 'products';
-        $products = implode(', ', array_slice($this->getTopProducts(), 0, 2));
+        $domain = strtolower(trim($domain));
+        $domain = (string) preg_replace('#^[a-z]+://#', '', $domain);
+        $domain = (string) preg_replace('#[/?].*$#', '', $domain);
 
-        return match ($key) {
-            'recommendation' => "What are the best online stores to buy {$category}? List specific store names and websites.",
-            'category'       => "Where can I buy {$category} online? Give me specific recommendations with store names and URLs.",
-            'brand_direct'   => "Tell me about {$brand} online store. What do they sell, what is their website, and would you recommend them?",
-            'product_search' => $products
-                ? "I'm looking for {$products} online. Which stores do you recommend and why?"
-                : "What online stores sell the best {$category}? Include website URLs.",
-            'comparison'     => "Compare {$brand} with other similar online stores for buying {$category}. What are the pros and cons of each?",
-            'gift_guide'     => "I'm looking for gift ideas for someone who likes {$category}. Which online stores have the best selection?",
-            default          => "Tell me about online stores that sell {$category}.",
-        };
+        return trim($domain, '.');
     }
 
-    private function defaultWeight(string $signal): float
+    /**
+     * Resolve the store this instance is scoped to.
+     *
+     * @return \Magento\Store\Api\Data\StoreInterface
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    private function resolveStore(): \Magento\Store\Api\Data\StoreInterface
     {
-        return match ($signal) {
-            'mentioned'          => 1.0,
-            'recommended'        => 1.5,
-            'url_cited'          => 1.5,
-            'first_result'       => 2.0,
-            'positive_sentiment' => 0.5,
-            default              => 1.0,
-        };
+        return $this->storeManager->getStore($this->scopeStoreId ?? null);
     }
 }

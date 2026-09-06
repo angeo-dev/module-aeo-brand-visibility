@@ -1,29 +1,29 @@
 {
     "name": "angeo/module-aeo-brand-visibility",
-    "description": "Live AI brand visibility audit for Magento 2. v3 adds per-store-view scoping, email alerting on score drops and competitor overtakes, a REST endpoint for headless dashboards, optional LLM-judge sentiment, and an evidence tie-in with angeo/module-aeo-audit v4 (low visibility + silent AI search crawlers -> points at the WAF). Grounded live-search measurement, share of voice, repeats and a pluggable provider registry from v2 carry over.",
+    "description": "Live AI brand visibility audit for Magento 2. Queries ChatGPT, Claude, Perplexity, Gemini and Groq — with optional web-grounded modes — repeats each prompt to produce a confidence interval, tracks competitor share-of-voice, and registers as a live_signal checker in angeo/module-aeo-audit.",
     "type": "magento2-module",
     "license": "MIT",
+    "version": "4.0.0",
     "keywords": [
         "magento2",
         "aeo",
         "brand visibility",
         "ai visibility",
+        "generative engine optimization",
         "chatgpt",
         "claude",
         "perplexity",
         "gemini",
         "groq",
-        "brand recall",
-        "ai audit",
-        "angeo",
-        "ai engine optimization",
         "brand monitoring",
-        "ai seo"
+        "share of voice",
+        "angeo"
     ],
     "authors": [
         {
             "name": "Ievgenii Gryshkun",
-            "email": "info@angeo.dev"
+            "email": "info@angeo.dev",
+            "homepage": "https://angeo.dev"
         }
     ],
     "support": {
@@ -32,21 +32,26 @@
     },
     "require": {
         "php": "~8.2.0||~8.3.0||~8.4.0",
-        "ext-curl": "*",
         "magento/framework": "^103.0",
+        "magento/framework-message-queue": "^100.4",
         "magento/module-backend": "^102.0",
+        "magento/module-catalog": "^104.0",
         "magento/module-config": "^101.2",
+        "magento/module-cron": "^100.4",
+        "magento/module-email": "^101.1",
         "magento/module-store": "^101.1",
-        "angeo/module-aeo-audit": "^4.0"
+        "magento/module-ui": "^101.2",
+        "angeo/module-aeo-audit": "^3.0||^4.0"
     },
     "require-dev": {
+        "magento/magento-coding-standard": "^32.0",
         "phpstan/phpstan": "^1.10",
         "phpunit/phpunit": "^10.0"
     },
     "suggest": {
-        "angeo/module-llms-txt": "Publish llms.txt to improve brand recall in AI training pipelines.",
-        "angeo/module-rich-data": "Improve Organization + Product schema to strengthen entity recognition.",
-        "angeo/module-openai-description-updater": "Improve product content quality to increase AI citation rate."
+        "angeo/module-llms-txt": "Publish llms.txt so AI crawlers can discover your catalogue structure.",
+        "angeo/module-rich-data": "Strengthen Organization and Product schema for entity recognition.",
+        "angeo/module-robots-txt-aeo": "Control which AI crawlers may read your store."
     },
     "autoload": {
         "files": [
@@ -63,6 +68,5 @@
         "psr-4": {
             "Angeo\\AeoBrandVisibility\\Test\\": "Test/"
         }
-    },
-    "version": "3.0.0"
+    }
 }

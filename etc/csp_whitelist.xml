@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ *
+ * The module performs no browser-side calls to AI providers; every request is
+ * server-side. Only the admin XHR endpoints of this module are listed.
+ -->
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <policy id="connect-src">
+            <values>
+                <value id="self" type="host">'self'</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>

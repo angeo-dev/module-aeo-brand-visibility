@@ -1,14 +1,32 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Model\Config\Source;
+
 use Magento\Framework\Data\OptionSourceInterface;
-class ClaudeModel implements OptionSourceInterface {
-    public function toOptionArray(): array {
+
+/**
+ * Anthropic Claude models offered in the admin.
+ *
+ * Model identifiers change often. The field accepts any value, so a model
+ * released after this version can be entered by hand.
+ */
+class ClaudeModel implements OptionSourceInterface
+{
+    /**
+     * @inheritDoc
+     */
+    public function toOptionArray(): array
+    {
         return [
-            ['value' => 'claude-sonnet-4-6',          'label' => 'Claude Sonnet 4.6 (Recommended)'],
-            ['value' => 'claude-opus-4-6',             'label' => 'Claude Opus 4.6 — Most capable'],
-            ['value' => 'claude-haiku-4-5-20251001',   'label' => 'Claude Haiku 4.5 — Fastest/Cheapest'],
-            ['value' => 'claude-sonnet-4-5-20251001',  'label' => 'Claude Sonnet 4.5'],
+            ['value' => 'claude-sonnet-4-6', 'label' => __('claude-sonnet-4-6 (recommended)')],
+            ['value' => 'claude-opus-4-6', 'label' => __('claude-opus-4-6')],
+            ['value' => 'claude-haiku-4-5', 'label' => __('claude-haiku-4-5')],
         ];
     }
 }

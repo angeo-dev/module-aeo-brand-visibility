@@ -1,49 +1,64 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Controller\Adminhtml\History;
 
+use Angeo\AeoBrandVisibility\Api\AuditResultRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\Controller\ResultInterface;
+use Magento\Framework\Registry;
 use Magento\Framework\View\Result\PageFactory;
-use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
 
+/**
+ * Renders one stored run in detail.
+ */
 class View extends Action implements HttpGetActionInterface
 {
-    const ADMIN_RESOURCE = 'Angeo_AeoBrandVisibility::run';
+    public const ADMIN_RESOURCE = 'Angeo_AeoBrandVisibility::view';
+    public const REGISTRY_KEY = 'angeo_brand_vis_record';
 
+    /**
+     * @param Context $context Backend action context.
+     * @param PageFactory $pageFactory Result page factory.
+     * @param AuditResultRepositoryInterface $repository Run persistence.
+     * @param Registry $registry Registry used to hand the record to the template.
+     */
     public function __construct(
         Context $context,
         private readonly PageFactory $pageFactory,
-        private readonly AuditResultRepository $repository
+        private readonly AuditResultRepositoryInterface $repository,
+        private readonly Registry $registry
     ) {
         parent::__construct($context);
     }
 
-    public function execute()
+    /**
+     * @inheritDoc
+     */
+    public function execute(): ResultInterface
     {
-        $id = (int) $this->getRequest()->getParam('id');
+        $id = (int) $this->getRequest()->getParam('id', 0);
 
         try {
             $record = $this->repository->getById($id);
         } catch (\Throwable $e) {
-            $this->messageManager->addErrorMessage(__('Audit result #%1 not found.', $id));
-            return $this->resultRedirectFactory->create()
-                ->setPath('angeo_brand_vis/history/index');
+            $this->messageManager->addErrorMessage(__('Could not load that audit run: %1', $e->getMessage()));
+
+            return $this->resultRedirectFactory->create()->setPath('*/history/index');
         }
 
-        $page = $this->pageFactory->create();
-        $page->getConfig()->getTitle()->prepend(
-            __('Audit #%1 — %2 — Score %3/100 (%4)',
-                $record->getId(),
-                $record->getCreatedAt(),
-                $record->getOverallScore(),
-                $record->getGrade()
-            )
-        );
+        $this->registry->register(self::REGISTRY_KEY, $record, true);
 
-        // Pass record to block via registry pattern
-        $this->getRequest()->setParam('audit_record', $record);
+        $page = $this->pageFactory->create();
+        $page->setActiveMenu('Angeo_AeoBrandVisibility::history');
+        $page->getConfig()->getTitle()->prepend(__('Audit Run #%1', $id));
 
         return $page;
     }

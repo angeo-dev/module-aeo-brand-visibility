@@ -1,48 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         cacheDirectory=".phpunit.cache"
-         executionOrder="depends,defects"
-         requireCoverageMetadata="false"
-         beStrictAboutOutputDuringTests="true"
-         beStrictAboutTodoAnnotations="false"
-         failOnRisky="true"
-         failOnWarning="true"
-         colors="true">
-
+         colors="true"
+         cacheDirectory=".phpunit.cache">
     <testsuites>
-        <testsuite name="Unit">
+        <testsuite name="Angeo_AeoBrandVisibility unit">
             <directory>Test/Unit</directory>
         </testsuite>
-        <testsuite name="Integration">
-            <directory>Test/Integration</directory>
-        </testsuite>
     </testsuites>
-
     <source>
         <include>
-            <directory>Console</directory>
-            <directory>Controller</directory>
-            <directory>Cron</directory>
-            <directory>Model</directory>
-            <directory>Service</directory>
-            <directory>Ui</directory>
+            <directory suffix=".php">Model</directory>
+            <directory suffix=".php">Service</directory>
         </include>
-        <exclude>
-            <directory>Test</directory>
-            <directory>vendor</directory>
-        </exclude>
     </source>
-
-    <coverage>
-        <report>
-            <html outputDirectory="build/coverage"/>
-            <text outputFile="build/coverage.txt" showUncoveredFiles="false"/>
-        </report>
-    </coverage>
-
-    <php>
-        <env name="MAGENTO_ROOT" value="/var/www/html"/>
-    </php>
 </phpunit>

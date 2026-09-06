@@ -1,35 +1,35 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
 
 declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model;
 
+use Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface;
+use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult as AuditResultResource;
 use Magento\Framework\Model\AbstractModel;
 use Magento\Framework\Model\Context;
-use Magento\Framework\Registry;
 use Magento\Framework\Model\ResourceModel\AbstractResource;
 use Magento\Framework\Data\Collection\AbstractDb;
+use Magento\Framework\Registry;
 use Magento\Framework\Serialize\SerializerInterface;
 
 /**
- * @method int    getId()
- * @method string getBrandName()
- * @method string getBrandDomain()
- * @method int    getOverallScore()
- * @method string getGrade()
- * @method string getProviderScores()
- * @method string getSignalRates()
- * @method string getResultsJson()
- * @method string getTriggeredBy()
- * @method int    getQueriesCount()
- * @method int    getErrorsCount()
- * @method int    getFromCache()
- * @method int|null getStoreId()
- * @method string getShareOfVoice()
- * @method string getCreatedAt()
+ * One persisted brand visibility run.
  */
-class AuditResult extends AbstractModel
+class AuditResult extends AbstractModel implements AuditResultInterface
 {
+    /**
+     * @param Context $context Model context.
+     * @param Registry $registry Registry.
+     * @param SerializerInterface $serializer Decodes the stored JSON columns.
+     * @param AbstractResource|null $resource Resource model.
+     * @param AbstractDb|null $resourceCollection Resource collection.
+     * @param array<string, mixed> $data Initial data.
+     */
     public function __construct(
         Context $context,
         Registry $registry,
@@ -41,46 +41,102 @@ class AuditResult extends AbstractModel
         parent::__construct($context, $registry, $resource, $resourceCollection, $data);
     }
 
+    /**
+     * Bind the model to its resource.
+     *
+     * @return void
+     */
     protected function _construct(): void
     {
-        $this->_init(\Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult::class);
+        $this->_init(AuditResultResource::class);
     }
 
-    /** @return array<string, mixed> */
-    public function getProviderScoresDecoded(): array
+    /**
+     * @inheritDoc
+     */
+    public function getStatus(): string
     {
-        return $this->decode((string) $this->getProviderScores());
+        $status = (string) $this->getData(self::STATUS);
+
+        return $status !== '' ? $status : self::STATUS_COMPLETE;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @inheritDoc
+     */
+    public function getOverallScore(): int
+    {
+        return (int) $this->getData(self::OVERALL_SCORE);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getGrade(): string
+    {
+        return (string) $this->getData(self::GRADE);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getStoreId(): int
+    {
+        return (int) $this->getData(self::STORE_ID);
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function getSignalRatesDecoded(): array
     {
-        return $this->decode((string) $this->getSignalRates());
+        /** @var array<string, float> $decoded */
+        $decoded = $this->decodeColumn(self::SIGNAL_RATES);
+
+        return $decoded;
     }
 
-    /** @return array<int, mixed> */
+    /**
+     * @inheritDoc
+     */
+    public function getProviderScoresDecoded(): array
+    {
+        /** @var array<string, int|null> $decoded */
+        $decoded = $this->decodeColumn(self::PROVIDER_SCORES);
+
+        return $decoded;
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function getResultsDecoded(): array
     {
-        return $this->decode((string) $this->getResultsJson());
+        /** @var array<int, array<string, mixed>> $decoded */
+        $decoded = $this->decodeColumn(self::RESULTS_JSON);
+
+        return $decoded;
     }
 
-    /** @return array<string, mixed> share-of-voice map (since 3.0.0) */
-    public function getShareOfVoiceDecoded(): array
+    /**
+     * Decode one JSON column, tolerating legacy or truncated payloads.
+     *
+     * @param string $column Column name.
+     * @return array<mixed>
+     */
+    private function decodeColumn(string $column): array
     {
-        return $this->decode((string) $this->getShareOfVoice());
-    }
-
-    /** @return array<mixed> */
-    private function decode(string $raw): array
-    {
-        if ($raw === '') {
+        $raw = $this->getData($column);
+        if (!is_string($raw) || $raw === '') {
             return [];
         }
+
         try {
             $decoded = $this->serializer->unserialize($raw);
-            return is_array($decoded) ? $decoded : [];
-        } catch (\InvalidArgumentException) {
+        } catch (\Throwable) {
             return [];
         }
+
+        return is_array($decoded) ? $decoded : [];
     }
 }

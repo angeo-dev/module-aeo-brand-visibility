@@ -1,106 +1,83 @@
-# angeo/module-aeo-brand-visibility
+# Angeo AEO Brand Visibility for Magento 2
 
-[![Packagist Version](https://img.shields.io/packagist/v/angeo/module-aeo-brand-visibility.svg)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
-[![Packagist Downloads](https://img.shields.io/packagist/dt/angeo/module-aeo-brand-visibility.svg)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
-[![PHP](https://img.shields.io/badge/PHP-%3E%3D8.2-blue.svg)](https://php.net)
-[![Magento](https://img.shields.io/badge/Magento-2.4.x-orange.svg)](https://magento.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Latest Stable Version](https://img.shields.io/packagist/v/angeo/module-aeo-brand-visibility.svg)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Live AI brand visibility audit for Magento 2 — queries ChatGPT, Claude, Perplexity, Gemini and Groq with brand-probing prompts and scores real-world AI recall, citation rate and recommendation presence. Multilingual since 1.3: detects recommendations and sentiment in English, Dutch, German, French and Ukrainian answers, and probes models in your market's language via the `{{language}}` placeholder.**
+Measure whether AI assistants actually name your store when a shopper asks them
+where to buy something.
 
-`angeo/module-aeo-brand-visibility` is an open-source Magento 2 module that answers one question: *when someone asks ChatGPT "where should I buy X?", does your store appear in the answer?* It runs configurable prompts across all major AI providers, detects brand signals in responses, and scores your visibility from 0 to 100 with a letter grade.
+The module asks ChatGPT, Claude, Perplexity, Gemini and Groq a set of shopping
+questions, reads their answers, and scores how visible your brand is. It repeats
+every question several times, so the score comes with a confidence interval
+instead of pretending one sample is the truth.
 
----
-
-## Table of contents
-
-- [What it measures](#what-it-measures)
-- [Supported AI providers](#supported-ai-providers)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Admin Panel](#admin-panel)
-- [CLI usage](#cli-usage)
-- [Full configuration reference](#full-configuration-reference)
-    - [General](#general)
-    - [AI Providers](#ai-providers)
-    - [Query Prompts](#query-prompts)
-    - [Scoring](#scoring)
-    - [Cron](#cron)
-- [Setup guides](#setup-guides)
-    - [Groq API key (free)](#groq-api-key-free)
-    - [OpenAI API key](#openai-api-key)
-    - [Anthropic Claude API key](#anthropic-claude-api-key)
-    - [Google Gemini API key](#google-gemini-api-key)
-    - [Perplexity API key](#perplexity-api-key)
-- [Scoring explained](#scoring-explained)
-- [How to improve your score](#how-to-improve-your-score)
-- [Integration with angeo/module-aeo-audit](#integration-with-angeomodule-aeo-audit)
-- [Related modules](#related-modules)
+It plugs into [`angeo/module-aeo-audit`](https://github.com/angeo-dev/module-aeo-audit)
+as a `live_signal` checker, and also runs on its own from the admin panel, cron
+or the command line.
 
 ---
 
-## What it measures
+## Why this exists
 
-Each AI query result is analysed for five signals:
-
-| Signal | Description |
-|---|---|
-| **Mentioned** | Your brand name appears in the AI response |
-| **Recommended** | AI actively suggests your store as a destination |
-| **URL Cited** | Your domain is included in the answer |
-| **1st Position** | Your store is the first recommendation |
-| **Positive Sentiment** | Response tone about your brand is positive |
-
-Each signal has a configurable weight. The overall score is a weighted average across all successful query results, converted to 0–100 and graded A–F.
-
-### Two measurement modes (since 2.0)
-
-AI assistants answer in two fundamentally different ways, and they measure different things:
-
-- **Training recall** (default) — the model answers from what it memorised during training. Fast and cheap, but months out of date and blind to your latest content and backlinks.
-- **Live web search** (*grounded* toggle) — the model actually searches the web before answering, exactly like a real ChatGPT / Gemini / Claude user's session. This is what "AI search visibility" really means.
-
-Enable *Live Web Search* per provider (ChatGPT, Claude, Gemini; Perplexity is always live, Groq never is). Every result records which mode produced it, and the report reports the mix rather than averaging the two silently.
-
-### Share of voice (since 2.0)
-
-A visibility score in isolation is hard to act on. Add competitors to the watch-list (`Name | domain.tld` per line) and every answer to "what are the best stores for X?" — which already names the competition — is mined for who else shows up. The report ranks your brand against each competitor: *you appear in 20% of answers, competitor X in 80%* names the actual problem an abstract "40/100" hides.
+Classic SEO tools tell you where you rank on a results page. They tell you
+nothing about what a language model says when someone asks it a question. This
+module measures that directly: it asks, then reads the answer.
 
 ---
 
-## Supported AI providers
+## What is measured
 
-| Provider | Models | Cost | Notes |
-|---|---|---|---|
-| **Groq** | llama-3.3-70b-versatile, mixtral-8x7b | **Free** | Best starting point — 14,400 req/day, no card |
-| **Perplexity** | sonar, sonar-pro, sonar-deep-research | Paid | Always live web search — most realistic signal |
-| **OpenAI** | gpt-4.1, gpt-4.1-mini, gpt-4o | Paid | Optional live search via Responses API `web_search` |
-| **Anthropic Claude** | claude-sonnet-4-6, claude-haiku-4-5 | Paid | Optional live search via `web_search` tool |
-| **Google Gemini** | gemini-2.5-flash-preview, gemini-2.0-flash | Free tier + paid | Optional Grounding with Google Search |
+Each answer is scored on five signals:
 
-> **Extending providers (since 2.0):** providers are wired as a di.xml array. Add your own (Mistral, DeepSeek, a local Ollama, …) by implementing `Angeo\AeoBrandVisibility\Api\AiProviderInterface` and appending one `<item>` to the `providers` argument of `BrandVisibilityService` — no core changes.
+| Signal | Question it answers | Default weight |
+| --- | --- | --- |
+| Mentioned | Does the answer name the brand at all? | 1.0 |
+| Recommended | Is the brand suggested, not just listed? | 1.5 |
+| URL cited | Is your domain quoted? | 1.5 |
+| First position | Is the brand named before its competitors? | 2.0 |
+| Positive tone | Is the wording around the brand favourable? | 0.5 |
 
-### Per-store, alerting, API (since 3.0)
+A sixth signal, **negative tone**, is not weighted. It reduces the earned score
+by the configured penalty, because "avoid this shop" is worse than not being
+mentioned at all.
 
-- **Per-store-view scoping** — brand identity, competitors and languages are read at store scope, so a multi-market Magento install gets an independent score, trend and alerting baseline per locale. The scheduled cron runs once per enabled store view.
-- **Email alerts** — a scheduled run that drops past a threshold, or a competitor newly overtaking you in share of voice, emails your team. Configured under *Brand Visibility → Alerting*; fires on cron/CLI only.
-- **REST API** — `GET /V1/angeo/brand-visibility/latest` (and `…/latest/store/:storeId`) returns the newest summary for headless storefronts and dashboards.
-- **LLM-judge sentiment** — optionally let the cheapest configured model classify sentiment in context instead of phrase packs; falls back automatically on failure.
-- **Evidence tie-in with `angeo/module-aeo-audit` v4** — when visibility is weak *and* your store's own instrumentation shows AI search crawlers never arrived, the audit checker points you at the WAF instead of at your content.
+On top of the per-answer score the module reports:
 
-Enable one or more providers. Each active provider runs all configured prompts, and results are aggregated into a single score.
+- **Share of voice** — your weight against every tracked competitor in the same
+  answer, based on how often you are named and how early.
+- **Win rate** — the share of answers where you are named before every
+  competitor.
+- **Accuracy issues** — answers where a model attributes a website you do not
+  own to your brand.
+
+---
+
+## Reading the score honestly
+
+Two things decide whether the number means anything.
+
+**Grounding.** A model answering from memory reflects a training set that is
+months old. Nothing you change on your store will move that number this quarter.
+A grounded model searches the live web before answering, so it responds to your
+work within days. Perplexity is always grounded; ChatGPT, Claude and Gemini can
+be, per provider, in the configuration. Groq cannot. If you want a metric that
+reacts to what you do, enable grounding.
+
+**Sampling.** Language models are not deterministic. The same prompt returns
+different answers. Every provider and prompt pair is therefore asked N times
+(three by default) and reported as a mean with the half-width of its 95%
+confidence interval — the `±` figure next to the score. A movement smaller than
+that margin is noise, and the alert system will not fire on it.
 
 ---
 
 ## Requirements
 
-- PHP 8.2, 8.3, or 8.4
-- Magento 2.4.6 / 2.4.7 / 2.4.8 (Adobe Commerce / Mage-OS supported)
-- `angeo/module-aeo-audit` ^4.0 (the v3 evidence tie-in uses the v4 bot-hit layer)
-- `ext-curl`
-
-> **Compatibility note**: 3.x requires `angeo/module-aeo-audit` ^4.0 for the evidence tie-in. If you are on the audit module's v3.x, pin this module to `^2.0`, which requires `^3.0 || ^4.0`.
+- Magento Open Source or Adobe Commerce 2.4.6 – 2.4.8
+- PHP 8.2, 8.3 or 8.4
+- `angeo/module-aeo-audit` 3.x or 4.x
+- At least one AI provider API key
+- A running message queue consumer (or inline run mode, see below)
 
 ---
 
@@ -108,416 +85,197 @@ Enable one or more providers. Each active provider runs all configured prompts, 
 
 ```bash
 composer require angeo/module-aeo-brand-visibility
+bin/magento module:enable Angeo_AeoBrandVisibility
 bin/magento setup:upgrade
 bin/magento setup:di:compile
 bin/magento cache:flush
 ```
 
----
-
-## Quick start
-
-**Step 1 — Configure your brand**
-
-Go to **Stores → Configuration → Angeo AEO → Brand Visibility → General**:
-
-1. **Brand Name** → your store name as AI systems know it (e.g. `Angeo`)
-2. **Brand Domain** → your domain without protocol (e.g. `angeo.dev`)
-3. **Store Category** → what you sell (e.g. `Magento development tools`)
-
-**Step 2 — Enable a free provider (Groq)**
-
-Go to **Groq Settings**:
-
-1. Get a free API key at [console.groq.com](https://console.groq.com) — no credit card
-2. **Enable Groq** → `Yes`
-3. **Groq API Key** → paste your `gsk_...` key
-4. **Save Config**
-
-**Step 3 — Run your first audit**
+Start the consumer that executes queued audits:
 
 ```bash
-bin/magento angeo:aeo:brand-visibility
+bin/magento queue:consumers:start angeoBrandVisAuditRun
 ```
 
-Or from Admin Panel: **Marketing → Angeo AEO → Brand Visibility → Run Audit**
+On most installations `consumers_runner` in `app/etc/env.php` starts it from
+cron automatically. If your platform does not run message queue consumers at
+all, set **Run Mode** to *Inline* in the configuration; be aware that a full run
+then happens inside the admin request and may hit the PHP or gateway timeout.
 
 ---
 
-## Admin Panel
+## Configuration
 
-**Marketing → Angeo AEO → Brand Visibility**
+**Stores → Configuration → Angeo AEO → Brand Visibility (AI Models)**
 
-### Run Audit
-
-The main dashboard with:
-
-- **Score ring** — overall score 0–100 with letter grade (A–F)
-- **Signal breakdown** — mention rate, recommendation rate, URL citation rate, 1st position rate, positive sentiment rate
-- **Results table** — per-provider, per-prompt responses with detected signals highlighted
-- **Action plan** — prioritised recommendations to improve your score
-- **Single Query Tester** — test one provider + one prompt without saving to history
-
-### Audit History
-
-Grid view of all past audit runs with:
-
-- Date, brand, score (colour-coded), grade (badge), triggered by, query count, error count
-- Signal pills showing signal rates at a glance
-- Click any row action → **View** for full detail page with raw AI responses
-
-### Configuration
-
-**Stores → Configuration → Angeo AEO → Brand Visibility**
-
----
-
-## CLI usage
-
-```bash
-# Full audit — all enabled providers, all enabled prompts
-bin/magento angeo:aeo:brand-visibility
-
-# Force fresh queries — bypass cache
-bin/magento angeo:aeo:brand-visibility --refresh
-
-# Test a single provider
-bin/magento angeo:aeo:brand-visibility --provider=groq
-
-# Test a single provider + specific prompt
-bin/magento angeo:aeo:brand-visibility --provider=chatgpt --prompt=brand_direct
-
-# Output as JSON (useful for CI pipelines)
-bin/magento angeo:aeo:brand-visibility --format=json
-
-# CI mode — exit code 1 if score below threshold
-bin/magento angeo:aeo:brand-visibility --fail-on=70
-```
-
-| Option | Values | Description |
-|---|---|---|
-| `--refresh` / `-r` | flag | Bypass cache, force live queries |
-| `--provider` | `chatgpt` `claude` `perplexity` `gemini` `groq` | Test one provider only |
-| `--prompt` | `recommendation` `category` `brand_direct` `product_search` `comparison` `gift_guide` | Test one prompt type only |
-| `--format` | `table` `json` `markdown` | Output format. Default: `table` |
-| `--fail-on` | `0`–`100` | Exit 1 if overall score is below this value |
-
----
-
-## Full configuration reference
-
-**Path:** Stores → Configuration → Angeo AEO → Brand Visibility
-
----
+Almost every setting is available per website and per store view, so a
+multi-store installation can measure each brand separately.
 
 ### General
 
-| Field | Default | Description |
-|---|---|---|
-| Brand Name | *(store name)* | Your brand name as AI systems know it |
-| Brand Domain | — | Your domain without protocol (e.g. `angeo.dev`). Used for URL citation detection. |
-| Brand Keywords | — | Comma-separated aliases the AI may use to refer to your brand |
-| Store Category | — | What you sell (e.g. `Magento 2 development tools`). Used in prompts. |
-| Top Products / Services | — | Newline-separated product or service names for product search prompts |
-| Cache Results (hours) | 12 | How long to cache audit results. `0` = always run live. |
-| Enable Cron | No | Run automatically on a schedule |
+| Field | Notes |
+| --- | --- |
+| Enable Brand Visibility | Includes the check in every AEO audit for this scope |
+| Run Mode | Background queue (recommended) or inline |
+| Brand Name | Defaults to the store name |
+| Brand Domain | Defaults to the store base URL host |
+| Brand Aliases | Alternate spellings, comma separated |
+| Store Category | What you sell, in two or three words |
+| Top Products | One per line; derived from the catalogue when empty |
+| Cache Lifetime | Hours; `0` disables caching completely |
+| Log Prompts and Answers | Writes to `var/log/angeo_aeo_brand_visibility.log` |
+
+**Set the store category.** When it is empty and the catalogue gives nothing
+useful, prompts fall back to a generic phrase, and generic phrases are won by
+the large marketplaces every time. This single field moves the score more than
+any other.
+
+### Providers
+
+Each provider has its own group with the same fields: enable, API key (stored
+encrypted), model, grounding, max tokens, temperature and timeout.
+
+| Provider | Grounded answers | Notes |
+| --- | --- | --- |
+| ChatGPT | Optional | Needs a search-capable model such as `gpt-4o-search-preview` |
+| Claude | Optional | Uses the server-side web search tool; billed per search |
+| Perplexity | Always | The most responsive signal of the five |
+| Gemini | Optional | Uses Google Search as a tool |
+| Groq | No | Free tier; a memory-only baseline |
+
+Model identifiers change often. Pick the closest option, and expect to revisit
+the field after a provider release.
+
+### Queries
+
+Six built-in prompts, each with its own on/off switch and optional override
+text: best stores in category, where to buy, tell me about this brand, product
+search, compare with competitors, gift guide. Add your own under **Custom
+Prompts**, one per line, as `key: prompt text`.
+
+Placeholders: `{{brand}}`, `{{domain}}`, `{{category}}`, `{{products}}`.
+
+**Samples per Query** controls how many times each pair is asked. Cost scales
+linearly with it; the confidence interval narrows with the square root of it.
+
+### Analysis
+
+Phrase matching supports **English, Ukrainian, Dutch, German, French and
+Spanish**. English phrases are always matched in addition to the selected
+language, because AI answers mix languages freely.
+
+**Extra Top-Level Domains** matters for the accuracy check: without `nl`, `de`
+or `co.uk` in that field, a wrong country domain attributed to your brand will
+not be flagged.
+
+### Alerts
+
+An alert fires when the score drops by more than the configured number of points
+against the trailing average **and** the drop exceeds the confidence margin of
+the run, or when a competitor outranks you, or negative tone or a wrong URL is
+detected.
+
+The webhook must be HTTPS, and hosts resolving to private or reserved addresses
+are rejected unless an operator explicitly allows them.
 
 ---
 
-### AI Providers
-
-Each provider has its own section. Enable the ones you have API keys for.
-
-#### ChatGPT (OpenAI)
-
-| Field | Default | Description |
-|---|---|---|
-| Enable ChatGPT | No | |
-| API Key | — | Starts with `sk-`. Stored encrypted. |
-| Model | gpt-4.1 | `gpt-4.1-mini` is fastest and cheapest. |
-| Max Tokens | 800 | Maximum response length. |
-| Request Timeout (s) | 30 | |
-
-#### Claude (Anthropic)
-
-| Field | Default | Description |
-|---|---|---|
-| Enable Claude | No | |
-| API Key | — | Starts with `sk-ant-`. Stored encrypted. |
-| Model | claude-sonnet-4-6 | `claude-haiku-4-5` is fastest and cheapest. |
-| Max Tokens | 800 | |
-| Request Timeout (s) | 60 | |
-
-#### Perplexity
-
-| Field | Default | Description |
-|---|---|---|
-| Enable Perplexity | No | |
-| API Key | — | Stored encrypted. |
-| Model | sonar | `sonar-pro` for deeper web search. `sonar-deep-research` for most thorough results. |
-| Max Tokens | 800 | |
-| Request Timeout (s) | 60 | Perplexity performs live web searches — may be slower. |
-
-> **Note:** Perplexity uses live web search, making it the most realistic indicator of actual AI visibility. It reflects what customers would see today, not what was in training data months ago.
-
-#### Gemini (Google)
-
-| Field | Default | Description |
-|---|---|---|
-| Enable Gemini | No | |
-| API Key | — | Stored encrypted. |
-| Model | gemini-2.5-flash-preview-05-20 | `gemini-2.0-flash` has a free tier. |
-| Max Tokens | 800 | |
-| Request Timeout (s) | 30 | |
-
-#### Groq (Free)
-
-| Field | Default | Description |
-|---|---|---|
-| Enable Groq | No | |
-| API Key | — | Starts with `gsk_`. No credit card required. |
-| Model | llama-3.3-70b-versatile | Best quality on free tier. |
-| Max Tokens | 800 | |
-| Request Timeout (s) | 30 | |
-
-Free tier: **30 RPM, 14,400 requests/day**.
-
----
-
-### Query Prompts
-
-Six prompt types are available. Enable or disable each individually.
-
-| Prompt Key | Example query sent to AI |
-|---|---|
-| `recommendation` | "What are the best online stores to buy [category]?" |
-| `category` | "Where can I buy [category] online?" |
-| `brand_direct` | "Tell me about [brand] — what do they sell and what is their website?" |
-| `product_search` | "I'm looking for [top products] online. Which stores do you recommend?" |
-| `comparison` | "Compare [brand] with other [category] stores online." |
-| `gift_guide` | "Which online stores have the best [category] for gifts?" |
-
-Additional settings:
-
-| Field | Default | Description |
-|---|---|---|
-| Queries per Provider | 3 | How many prompts to run per enabled provider per audit |
-| Delay Between Queries (ms) | 500 | Rate limiting delay between individual API calls |
-| System Prompt | *(default)* | Instructions sent to each AI model before the query |
-| Custom Prompts | — | Additional prompts, one per line, format: `key: prompt text` |
-
----
-
-### Scoring
-
-Signal weights determine the contribution of each detected signal to the overall score:
-
-| Signal | Default Weight |
-|---|---|
-| 1st Position | 2.0 |
-| Recommended | 1.5 |
-| URL Cited | 1.5 |
-| Mentioned | 1.0 |
-| Positive Sentiment | 0.5 |
-
-Grade thresholds:
-
-| Score | Grade |
-|---|---|
-| 90–100 | A |
-| 75–89 | B |
-| 60–74 | C |
-| 40–59 | D |
-| 0–39 | F |
-
----
-
-### Cron
-
-| Field | Default | Description |
-|---|---|---|
-| Enable Cron | No | Run audit automatically on a schedule |
-| Schedule | `0 6 * * *` | Standard cron expression. Default: daily at 6:00 AM. |
-
-Results from cron runs appear in **Audit History** with `triggered_by: cron`.
-
----
-
-## Setup guides
-
-### Groq API key (free)
-
-1. Go to [console.groq.com](https://console.groq.com) — create an account, **no credit card required**
-2. **API Keys → Create API key**
-3. Copy the key (starts with `gsk_`)
-4. In Magento: **Stores → Configuration → Angeo AEO → Brand Visibility → Groq Settings → API Key**
-
----
-
-### OpenAI API key
-
-1. Go to [platform.openai.com](https://platform.openai.com) → sign in or create account
-2. **API keys → Create new secret key**
-3. Copy the key (starts with `sk-`) — shown only once
-4. In Magento: **... → ChatGPT Settings → API Key**
-
----
-
-### Anthropic Claude API key
-
-1. Go to [console.anthropic.com](https://console.anthropic.com) → create account
-2. **API Keys → Create Key**
-3. Copy the key (starts with `sk-ant-`)
-4. In Magento: **... → Claude Settings → API Key**
-
----
-
-### Google Gemini API key
-
-1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-2. **Create API key in new project**
-3. Copy the key
-4. In Magento: **... → Gemini Settings → API Key**
-
----
-
-### Perplexity API key
-
-1. Go to [perplexity.ai/settings/api](https://perplexity.ai/settings/api)
-2. **Generate** → copy the key
-3. In Magento: **... → Perplexity Settings → API Key**
-
----
-
-## Scoring explained
-
-Each AI query produces a `BrandQueryResult` with five boolean signals. Signals are weighted and averaged:
-
-```
-query_score = sum(signal_weight for each detected signal) /
-              sum(all_signal_weights) * 100
-```
-
-The overall score is the average of all successful query scores. Failed queries (API errors) are excluded from the average.
-
-**Example with default weights:**
-- 1st Position detected → +2.0
-- Recommended detected → +1.5
-- URL Cited not detected → 0
-- Mentioned detected → +1.0
-- Positive Sentiment detected → +0.5
-
-```
-query_score = (2.0 + 1.5 + 1.0 + 0.5) / (2.0 + 1.5 + 1.5 + 1.0 + 0.5) * 100
-            = 5.0 / 6.5 * 100 = 76.9 → Grade B
-```
-
----
-
-## How to improve your score
-
-| Signal missing | Root cause | Fix |
-|---|---|---|
-| Not mentioned | AI has no knowledge of your brand | Publish content that AI systems crawl: Dev.to, Reddit, GitHub |
-| URL not cited | Domain not in AI training data or live index | Install [`angeo/module-llms-txt`](https://packagist.org/packages/angeo/module-llms-txt) to give AI systems a structured map of your site |
-| Not recommended | No authority signals in AI-accessible content | Add Product and Organization JSON-LD via [`angeo/module-rich-data`](https://packagist.org/packages/angeo/module-rich-data) |
-| Not 1st position | Competitors have stronger AI presence | Increase external mentions: guest posts, Packagist downloads, GitHub stars |
-| Negative sentiment | Poor reviews or negative coverage | Address public feedback; ensure AI-crawlable content is positive |
-
-Run `bin/magento angeo:aeo:audit` for a full 15-signal technical AEO audit to identify and fix the infrastructure issues that block AI indexing.
-
----
-
-## Integration with angeo/module-aeo-audit
-
-When `angeo/module-aeo-audit` v3.0+ is installed (required dependency), this
-module adds a `brand_visibility` checker to the AEO audit pipeline as the
-**16th signal** alongside the 15 built-in ones.
+## Command line
 
 ```bash
-# Full 16-signal audit including brand visibility
-bin/magento angeo:aeo:audit
+# Full audit for the default scope
+bin/magento angeo:aeo:brand-visibility
 
-# Skip brand visibility (saves API calls) — runs only the 15 built-in technical checks
-bin/magento angeo:aeo:audit --category=technical,feed
+# One store view, ignoring the cache, with the action plan
+bin/magento angeo:aeo:brand-visibility --store=2 --refresh --plan
 
-# Run only live signals (this checker — live_signal category is reserved for third-party live checks)
-bin/magento angeo:aeo:audit --category=live_signal
+# Machine-readable output
+bin/magento angeo:aeo:brand-visibility --format=json
+bin/magento angeo:aeo:brand-visibility --format=markdown
+
+# One provider and prompt, printing the raw answer
+bin/magento angeo:aeo:brand-visibility --provider=perplexity --prompt=brand_direct
+
+# Fail a CI pipeline below a threshold
+bin/magento angeo:aeo:brand-visibility --fail-on=50
 ```
 
-Brand visibility is registered with:
-- **Category**: `live_signal` — calls external APIs
-- **Severity**: `critical` — headline AEO metric
-- **Weight**: 1.0 — top-tier signal in the score
+| Option | Meaning |
+| --- | --- |
+| `--store` | Store view id (default `0`) |
+| `--refresh`, `-r` | Bypass the result cache |
+| `--provider` | Query one provider instead of the full audit |
+| `--prompt` | Prompt key used with `--provider` |
+| `--format` | `table`, `json` or `markdown` |
+| `--plan` | Print the action plan |
+| `--fail-on` | Exit code 1 below this score |
 
-Pass/warn/fail status is driven by your configured score thresholds
-(default pass = 80, warn = 60).
+---
 
-### Custom-checker authors
+## Admin panel
 
-This module is the canonical example of how to extend the audit pipeline.
-v3 checker contract:
+**Marketing → AEO Brand Visibility**
 
-```php
-public function check(\Magento\Store\Api\Data\StoreInterface $store): CheckResult;
-public function getCategory(): string;   // CheckerInterface::CATEGORY_*
-public function getSeverity(): string;   // CheckerInterface::SEVERITY_*
+- **Dashboard** — pick a store view, start a run, watch it complete, read each
+  answer, and generate the action plan from the latest stored run.
+- **Audit History** — a standard grid with filters, plus a detail page and CSV
+  export per run.
+
+Access is split into four permissions, so an agency can be given read access
+without the ability to spend money on API calls:
+
+| Resource | Grants |
+| --- | --- |
+| `Angeo_AeoBrandVisibility::view` | Read reports and history |
+| `Angeo_AeoBrandVisibility::run` | Start audits and single test queries |
+| `Angeo_AeoBrandVisibility::export` | Download CSV |
+| `Angeo_AeoBrandVisibility::config` | Change the configuration |
+
+---
+
+## Scheduling and retention
+
+Scheduled runs use the dedicated `angeo_brand_visibility` cron group, so slow
+provider calls cannot delay Magento's default group. A second job applies the
+retention policy nightly: runs older than the configured age, and runs beyond
+the per-store-view budget, are deleted.
+
+---
+
+## Cost
+
+Cost is `providers × prompts × samples` requests per run. With three providers,
+three prompts and three samples that is 27 requests. Weekly runs on small models
+are cents; grounded searches on large models are not. Start with `samples = 3`
+and one grounded provider.
+
+---
+
+## Development
+
+```bash
+vendor/bin/phpcs --standard=vendor/angeo/module-aeo-brand-visibility/phpcs.xml
+vendor/bin/phpstan analyse -c vendor/angeo/module-aeo-brand-visibility/phpstan.neon
+vendor/bin/phpunit -c vendor/angeo/module-aeo-brand-visibility/phpunit.xml
 ```
 
-Extending `\Angeo\AeoAudit\Model\Checker\AbstractChecker` is the easiest
-path — you get `HttpCache` + `StoreUrlSampler` + JSON-LD parsing
-helpers + result factory methods for free.
+Adding a provider takes an `AiProviderInterface` implementation and one line in
+the `ProviderPool` argument of `etc/di.xml`. No existing class needs editing.
 
 ---
 
 ## Related modules
 
-| Module | Purpose |
-|---|---|
-| [`angeo/module-aeo-audit`](https://packagist.org/packages/angeo/module-aeo-audit) | 15-signal CLI audit — robots/llms/schema/UCP/feeds/etc. |
-| [`angeo/module-llms-txt`](https://packagist.org/packages/angeo/module-llms-txt) | Auto-generates llms.txt and llms.jsonl |
-| [`angeo/module-rich-data`](https://packagist.org/packages/angeo/module-rich-data) | Product, Organization, FAQPage JSON-LD schema |
-| [`angeo/module-openai-product-feed`](https://packagist.org/packages/angeo/module-openai-product-feed) | ChatGPT Shopping product feed |
-| [`angeo/module-ucp`](https://packagist.org/packages/angeo/module-ucp) | Universal Commerce Protocol `/.well-known/ucp` |
-| [`angeo/module-ai-description-updater`](https://packagist.org/packages/angeo/module-ai-description-updater) | Bulk AI product description generation |
-
----
-
-## Security &amp; data handling
-
-This module talks to external AI APIs and renders their responses in the admin
-panel, so it follows defensive defaults:
-
-- **API keys** for every provider (ChatGPT, Claude, Perplexity, Gemini, Groq)
-  are stored with Magento's `Magento\Config\Model\Config\Backend\Encrypted`
-  backend model and rendered as `obscure` fields. They are never written to
-  logs. The Gemini key is sent in the `x-goog-api-key` request header rather
-  than the URL query string, so it cannot leak into proxy or access logs.
-- **Outbound HTTP** is HTTPS-only and does not follow redirects
-  (`CURLOPT_PROTOCOLS`/`CURLOPT_REDIR_PROTOCOLS` pinned to HTTPS,
-  `CURLOPT_FOLLOWLOCATION` disabled), with an explicit connect timeout.
-- **Admin AJAX endpoints** are protected by ACL
-  (`Angeo_AeoBrandVisibility::run`) and Magento's form key; mutating actions
-  are POST-only. Unexpected exceptions are logged to the module log and only a
-  generic message is returned to the browser.
-- **Output escaping**: server-rendered templates use `escapeHtml`/`escapeUrl`,
-  and the JS that injects AI-provider text into the admin UI routes every
-  untrusted value through a strict HTML/attribute escaper before insertion.
-- **Serialization** uses Magento's `SerializerInterface` throughout (no native
-  `json_encode`/`json_decode` and no PHP `serialize()` of untrusted data),
-  avoiding object-injection surfaces.
-- **Log contents**: when *Enable Logging* is on, truncated prompt and response
-  previews are written to `var/log/angeo_aeo_brand_visibility.log`. Keep logging
-  off in production if your prompts may contain sensitive data.
+- `angeo/module-aeo-audit` — the audit framework this checker plugs into
+- `angeo/module-llms-txt` — publish `llms.txt` for AI crawlers
+- `angeo/module-rich-data` — stronger Organization and Product schema
+- `angeo/module-robots-txt-aeo` — control which AI crawlers may read the store
 
 ---
 
 ## License
 
-MIT — free to use, modify, and distribute.
+MIT. See [LICENSE](LICENSE).
 
----
-
-## Author
-
-**Ievgenii Gryshkun** · [angeo.dev](https://angeo.dev) · [info@angeo.dev](mailto:info@angeo.dev)
+Built by [Ievgenii Gryshkun](https://angeo.dev) — Magento 2 solution architect,
+Netherlands.

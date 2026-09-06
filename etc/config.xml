@@ -1,54 +1,65 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
     <default>
         <angeo_brand_vis>
             <general>
                 <enabled>0</enabled>
-                <log_enabled>1</log_enabled>
+                <run_mode>queue</run_mode>
+                <log_enabled>0</log_enabled>
                 <cache_ttl_hours>24</cache_ttl_hours>
             </general>
             <chatgpt>
-                <enabled>1</enabled>
-                <model>gpt-4.1</model>
+                <enabled>0</enabled>
+                <model>gpt-4.1-mini</model>
+                <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
                 <temperature>0.3</temperature>
-                <timeout>45</timeout>
-                <grounded>0</grounded>
+                <timeout>60</timeout>
             </chatgpt>
             <claude>
                 <enabled>0</enabled>
                 <model>claude-sonnet-4-6</model>
+                <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
-                <timeout>60</timeout>
-                <grounded>0</grounded>
+                <temperature>0.3</temperature>
+                <timeout>90</timeout>
             </claude>
             <perplexity>
                 <enabled>0</enabled>
                 <model>sonar</model>
+                <grounding>1</grounding>
                 <max_tokens>800</max_tokens>
-                <timeout>45</timeout>
+                <temperature>0.2</temperature>
+                <timeout>60</timeout>
             </perplexity>
             <gemini>
                 <enabled>0</enabled>
-                <model>gemini-2.5-flash-preview-05-20</model>
+                <model>gemini-2.0-flash</model>
+                <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
-                <timeout>45</timeout>
-                <grounded>0</grounded>
+                <temperature>0.3</temperature>
+                <timeout>60</timeout>
             </gemini>
             <groq>
                 <enabled>0</enabled>
                 <model>llama-3.3-70b-versatile</model>
+                <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
+                <temperature>0.3</temperature>
                 <timeout>30</timeout>
             </groq>
             <queries>
-                <max_prompts_per_provider>3</max_prompts_per_provider>
-                <!-- legacy pre-1.3.0 path kept as fallback in Config::getQueriesPerProvider() -->
-                <queries_per_provider>3</queries_per_provider>
-                <query_language>English</query_language>
-                <repeats_per_prompt>1</repeats_per_prompt>
-                <delay_between_ms>500</delay_between_ms>
+                <max_prompts>3</max_prompts>
+                <samples>3</samples>
+                <delay_between_ms>600</delay_between_ms>
+                <max_retries>2</max_retries>
                 <enable_recommendation>1</enable_recommendation>
                 <enable_category>1</enable_category>
                 <enable_brand_direct>1</enable_brand_direct>
@@ -56,17 +67,6 @@
                 <enable_comparison>0</enable_comparison>
                 <enable_gift_guide>0</enable_gift_guide>
             </queries>
-            <analysis>
-                <!-- empty = all shipped phrase packs (en,nl,de,fr,uk) -->
-                <languages></languages>
-                <competitors></competitors>
-                <sentiment_mode>phrase</sentiment_mode>
-            </analysis>
-            <alerting>
-                <enabled>0</enabled>
-                <drop_threshold>10</drop_threshold>
-                <sender_identity>general</sender_identity>
-            </alerting>
             <scoring>
                 <pass_threshold>60</pass_threshold>
                 <warn_threshold>30</warn_threshold>
@@ -75,11 +75,30 @@
                 <weight_url_cited>1.5</weight_url_cited>
                 <weight_first_result>2.0</weight_first_result>
                 <weight_positive_sentiment>0.5</weight_positive_sentiment>
+                <negative_penalty>0.5</negative_penalty>
             </scoring>
             <cron>
                 <enabled>0</enabled>
                 <schedule>0 5 * * 1</schedule>
             </cron>
+            <competitors>
+                <list/>
+            </competitors>
+            <analysis>
+                <language>auto</language>
+                <extra_tlds/>
+            </analysis>
+            <alerts>
+                <enabled>0</enabled>
+                <recipient/>
+                <drop_threshold>10</drop_threshold>
+                <webhook_url/>
+                <webhook_allow_private>0</webhook_allow_private>
+            </alerts>
+            <retention>
+                <max_records_per_store>90</max_records_per_store>
+                <max_age_days>365</max_age_days>
+            </retention>
         </angeo_brand_vis>
     </default>
 </config>

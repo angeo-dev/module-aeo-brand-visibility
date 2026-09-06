@@ -2,10 +2,19 @@
     "angeo_brand_visibility_audit": {
         "column": {
             "id": true,
+            "run_uuid": true,
+            "status": true,
+            "error_message": true,
             "brand_name": true,
             "brand_domain": true,
+            "store_id": true,
             "overall_score": true,
+            "score_margin": true,
             "grade": true,
+            "samples": true,
+            "share_of_voice": true,
+            "win_rate": true,
+            "accuracy_issues": true,
             "provider_scores": true,
             "signal_rates": true,
             "results_json": true,
@@ -13,17 +22,18 @@
             "queries_count": true,
             "errors_count": true,
             "from_cache": true,
-            "created_at": true,
-            "share_of_voice": true,
-            "store_id": true
-        },
-        "index": {
-            "ANGEO_BRAND_VISIBILITY_AUDIT_CREATED_AT": true,
-            "ANGEO_BRAND_VISIBILITY_AUDIT_OVERALL_SCORE": true,
-            "ANGEO_BRAND_VIS_STORE_ID": true
+            "created_at": true
         },
         "constraint": {
             "PRIMARY": true
+        },
+        "index": {
+            "ANGEO_BRAND_VIS_CREATED_AT": true,
+            "ANGEO_BRAND_VIS_OVERALL_SCORE": true,
+            "ANGEO_BRAND_VIS_STORE_ID": true,
+            "ANGEO_BRAND_VIS_STORE_ID_CREATED_AT": true,
+            "ANGEO_BRAND_VIS_STATUS": true,
+            "ANGEO_BRAND_VIS_RUN_UUID": true
         }
     }
 }

@@ -1,14 +1,21 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
-    <!-- REST API (since 3.0.0) -->
-    <preference for="Angeo\AeoBrandVisibility\Api\ReportManagementInterface"
-                type="Angeo\AeoBrandVisibility\Model\ReportManagement"/>
-    <preference for="Angeo\AeoBrandVisibility\Api\Data\VisibilitySummaryInterface"
-                type="Angeo\AeoBrandVisibility\Model\VisibilitySummary"/>
+    <preference for="Angeo\AeoBrandVisibility\Api\BrandVisibilityServiceInterface"
+                type="Angeo\AeoBrandVisibility\Service\BrandVisibilityService"/>
+    <preference for="Angeo\AeoBrandVisibility\Api\AuditResultRepositoryInterface"
+                type="Angeo\AeoBrandVisibility\Model\AuditResultRepository"/>
+    <preference for="Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface"
+                type="Angeo\AeoBrandVisibility\Model\AuditResult"/>
 
-    <!-- Dedicated logger -->
+    <!-- Dedicated log file -->
     <virtualType name="Angeo\AeoBrandVisibility\Logger\Handler" type="Magento\Framework\Logger\Handler\Base">
         <arguments>
             <argument name="fileName" xsi:type="string">/var/log/angeo_aeo_brand_visibility.log</argument>
@@ -22,84 +29,69 @@
         </arguments>
     </virtualType>
 
+    <!--
+        Provider pool. Adding a provider is a di.xml entry, not a code change:
+        implement AiProviderInterface and append it here.
+    -->
+    <type name="Angeo\AeoBrandVisibility\Service\Provider\ProviderPool">
+        <arguments>
+            <argument name="providers" xsi:type="array">
+                <item name="chatgpt" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider
+                </item>
+                <item name="claude" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider
+                </item>
+                <item name="perplexity" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Service\Provider\PerplexityProvider
+                </item>
+                <item name="gemini" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider
+                </item>
+                <item name="groq" xsi:type="object">
+                    Angeo\AeoBrandVisibility\Service\Provider\GroqProvider
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
     <type name="Angeo\AeoBrandVisibility\Service\BrandVisibilityService">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-            <argument name="alerting" xsi:type="object">Angeo\AeoBrandVisibility\Service\AlertDispatcher</argument>
-            <!-- Provider registry (since 2.0.0). Third-party modules add
-                 providers here by implementing AiProviderInterface — no core
-                 changes needed. Order defines report/UI ordering. -->
-            <argument name="providers" xsi:type="array">
-                <item name="chatgpt"    xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider</item>
-                <item name="claude"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider</item>
-                <item name="perplexity" xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\PerplexityProvider</item>
-                <item name="gemini"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider</item>
-                <item name="groq"       xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GroqProvider</item>
-            </argument>
         </arguments>
     </type>
-
-    <!-- Sentiment judge shares the same provider registry (since 3.0.0) -->
-    <type name="Angeo\AeoBrandVisibility\Service\SentimentJudge">
-        <arguments>
-            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-            <argument name="providers" xsi:type="array">
-                <item name="chatgpt"    xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ChatGptProvider</item>
-                <item name="claude"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\ClaudeProvider</item>
-                <item name="perplexity" xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\PerplexityProvider</item>
-                <item name="gemini"     xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GeminiProvider</item>
-                <item name="groq"       xsi:type="object">Angeo\AeoBrandVisibility\Service\Provider\GroqProvider</item>
-            </argument>
-        </arguments>
-    </type>
-
-    <type name="Angeo\AeoBrandVisibility\Service\AlertDispatcher">
+    <type name="Angeo\AeoBrandVisibility\Service\Provider\AbstractHttpProvider">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
         </arguments>
     </type>
-
-    <!-- Wire the optional collaborators onto the service and analyzer -->
-    <type name="Angeo\AeoBrandVisibility\Service\ResponseAnalyzer">
+    <type name="Angeo\AeoBrandVisibility\Service\AlertNotifier">
         <arguments>
-            <argument name="sentimentJudge" xsi:type="object">Angeo\AeoBrandVisibility\Service\SentimentJudge</argument>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
         </arguments>
     </type>
-
+    <type name="Angeo\AeoBrandVisibility\Service\Webhook\WebhookClient">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
+    <type name="Angeo\AeoBrandVisibility\MessageQueue\AuditRunConsumer">
+        <arguments>
+            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
+        </arguments>
+    </type>
     <type name="Angeo\AeoBrandVisibility\Cron\RunBrandVisibilityAudit">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
         </arguments>
     </type>
-
-    <!-- Route module logging in AJAX controllers to the dedicated log file -->
-    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Run\Index">
-        <arguments>
-            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-        </arguments>
-    </type>
-    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Plan\Index">
-        <arguments>
-            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-        </arguments>
-    </type>
-    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\Query\Single">
-        <arguments>
-            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-        </arguments>
-    </type>
-    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\History\Data">
-        <arguments>
-            <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
-        </arguments>
-    </type>
-    <type name="Angeo\AeoBrandVisibility\Controller\Adminhtml\History\ViewData">
+    <type name="Angeo\AeoBrandVisibility\Cron\CleanupAuditResults">
         <arguments>
             <argument name="logger" xsi:type="object">Angeo\AeoBrandVisibility\Logger\Logger</argument>
         </arguments>
     </type>
 
-    <!-- Inject BrandVisibilityChecker into aeo-audit AuditRunner -->
+    <!-- Register as a live_signal checker inside angeo/module-aeo-audit -->
     <type name="Angeo\AeoAudit\Model\AuditRunner">
         <arguments>
             <argument name="checkers" xsi:type="array">
@@ -110,12 +102,14 @@
         </arguments>
     </type>
 
-    <!-- UI Grid data provider for History listing -->
+    <!-- Admin grid data source -->
     <virtualType name="Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\Grid\Collection"
                  type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
         <arguments>
             <argument name="mainTable" xsi:type="string">angeo_brand_visibility_audit</argument>
-            <argument name="resourceModel" xsi:type="string">Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult</argument>
+            <argument name="resourceModel" xsi:type="string">
+                Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult
+            </argument>
             <argument name="identifierName" xsi:type="string">id</argument>
             <argument name="connectionName" xsi:type="string">default</argument>
         </arguments>
@@ -130,15 +124,13 @@
         </arguments>
     </type>
 
-
     <type name="Magento\Framework\Console\CommandList">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="angeo_brand_visibility" xsi:type="object">
+                <item name="angeo_brand_visibility_run" xsi:type="object">
                     Angeo\AeoBrandVisibility\Console\Command\RunBrandAuditCommand
                 </item>
             </argument>
         </arguments>
     </type>
-
 </config>

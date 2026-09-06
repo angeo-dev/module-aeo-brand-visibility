@@ -1,131 +1,274 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
 
 declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model\Result;
 
-/** Aggregated brand visibility report across all providers × prompts. */
+/**
+ * Aggregated report across every provider and prompt of one run.
+ */
 final class BrandVisibilityReport
 {
-    /** @param BrandQueryResult[] $results */
-    public function __construct(
-        public readonly string             $brandName,
-        public readonly string             $brandDomain,
-        public readonly array              $results,
-        public readonly \DateTimeImmutable $generatedAt,
-        public readonly bool               $fromCache = false,
-        // Store view this report was produced for (since 3.0.0). null = default
-        // scope / all-stores aggregate.
-        public readonly ?int               $storeId = null,
-    ) {}
+    private const GRADE_THRESHOLDS = ['A' => 90, 'B' => 75, 'C' => 60, 'D' => 40];
 
+    /**
+     * @param string $brandName Brand the run was about.
+     * @param string $brandDomain Brand domain the run was about.
+     * @param BrandQueryResult[] $results One cell per provider and prompt.
+     * @param \DateTimeImmutable $generatedAt Completion timestamp.
+     * @param int $samples Repeats requested per cell.
+     * @param bool $fromCache Whether the report came from the cache.
+     */
+    public function __construct(
+        public readonly string $brandName,
+        public readonly string $brandDomain,
+        public readonly array $results,
+        public readonly \DateTimeImmutable $generatedAt,
+        public readonly int $samples = 1,
+        public readonly bool $fromCache = false
+    ) {
+    }
+
+    /**
+     * Whether any cell produced usable data.
+     *
+     * @return bool
+     */
+    public function hasData(): bool
+    {
+        return $this->successfulResults() !== [];
+    }
+
+    /**
+     * Mean score across successful cells, 0-100.
+     *
+     * @return int
+     */
     public function getOverallScore(): int
     {
-        $ok = $this->successfulResults();
-        return empty($ok) ? 0 : (int) round(array_sum(array_map(fn($r) => $r->score, $ok)) / count($ok));
+        $successful = $this->successfulResults();
+        if ($successful === []) {
+            return 0;
+        }
+
+        return (int) round(
+            array_sum(array_map(static fn(BrandQueryResult $r): int => $r->score, $successful))
+            / count($successful)
+        );
     }
 
+    /**
+     * Half-width of the confidence interval around the overall score.
+     *
+     * @return float
+     */
+    public function getScoreMargin(): float
+    {
+        $successful = $this->successfulResults();
+        if ($successful === []) {
+            return 0.0;
+        }
+
+        $margins = array_map(static fn(BrandQueryResult $r): float => $r->scoreMargin, $successful);
+
+        return round(array_sum($margins) / count($successful), 1);
+    }
+
+    /**
+     * Letter grade for the overall score.
+     *
+     * @return string
+     */
     public function getGrade(): string
     {
-        return match (true) {
-            $this->getOverallScore() >= 90 => 'A',
-            $this->getOverallScore() >= 75 => 'B',
-            $this->getOverallScore() >= 60 => 'C',
-            $this->getOverallScore() >= 40 => 'D',
-            default                        => 'F',
-        };
+        $score = $this->getOverallScore();
+        foreach (self::GRADE_THRESHOLDS as $grade => $threshold) {
+            if ($score >= $threshold) {
+                return $grade;
+            }
+        }
+
+        return 'F';
     }
 
-    /** Rate (0–100%) of successful results where signal was true */
+    /**
+     * Share of successful cells where a signal fired, 0-100.
+     *
+     * @param string $signal Signal identifier.
+     * @return float
+     */
     public function signalRate(string $signal): float
     {
-        $ok = $this->successfulResults();
-        if (empty($ok)) return 0.0;
-        $positive = count(array_filter($ok, fn($r) => $r->signals[$signal] ?? false));
-        return round($positive / count($ok) * 100, 1);
+        $successful = $this->successfulResults();
+        if ($successful === []) {
+            return 0.0;
+        }
+
+        $sum = 0.0;
+        foreach ($successful as $result) {
+            $sum += $result->signalRates[$signal] ?? 0.0;
+        }
+
+        return round($sum / count($successful), 1);
     }
 
-    /** @return BrandQueryResult[] */
+    /**
+     * Cells with at least one successful sample.
+     *
+     * @return BrandQueryResult[]
+     */
     public function successfulResults(): array
     {
-        return array_values(array_filter($this->results, fn($r) => $r->isSuccess()));
+        return array_values(array_filter(
+            $this->results,
+            static fn(BrandQueryResult $r): bool => $r->isSuccess()
+        ));
     }
 
-    /** @return BrandQueryResult[] */
+    /**
+     * Cells where every sample failed.
+     *
+     * @return BrandQueryResult[]
+     */
     public function failedResults(): array
     {
-        return array_values(array_filter($this->results, fn($r) => !$r->isSuccess()));
+        return array_values(array_filter(
+            $this->results,
+            static fn(BrandQueryResult $r): bool => !$r->isSuccess()
+        ));
     }
 
-    /** Results grouped by provider */
+    /**
+     * Cells grouped by provider identifier.
+     *
+     * @return array<string, BrandQueryResult[]>
+     */
     public function resultsByProvider(): array
     {
         $grouped = [];
-        foreach ($this->results as $r) {
-            $grouped[$r->providerId][] = $r;
+        foreach ($this->results as $result) {
+            $grouped[$result->providerId][] = $result;
         }
+
         return $grouped;
     }
 
     /**
-     * Share of voice across successful results (since 2.0.0): for the own
-     * brand and every watched competitor, the percentage of answers that
-     * mention or cite them. This is the number that gives the absolute
-     * score meaning — "40/100" says little; "you appear in 20% of answers,
-     * competitor X in 80%" names the actual problem.
+     * Mean score per provider, null when the provider produced no data.
      *
-     * @return array<string, float> display name => 0..100
+     * @return array<string, int|null>
      */
-    public function shareOfVoice(): array
-    {
-        $ok = $this->successfulResults();
-        if ($ok === []) {
-            return [];
-        }
-
-        $sov = [$this->brandName => $this->signalRate('mentioned')];
-
-        $counts = [];
-        foreach ($ok as $result) {
-            foreach ($result->competitorMentions as $name => $hit) {
-                $counts[$name] = ($counts[$name] ?? 0) + ($hit ? 1 : 0);
-            }
-        }
-        foreach ($counts as $name => $hits) {
-            $sov[$name] = round($hits / count($ok) * 100, 1);
-        }
-
-        arsort($sov);
-        return $sov;
-    }
-
-    /**
-     * How many successful results were produced with live web access vs
-     * training recall (since 2.0.0). The two modes measure different things;
-     * the report surfaces the mix instead of hiding it.
-     *
-     * @return array{grounded: int, recall: int}
-     */
-    public function groundingBreakdown(): array
-    {
-        $grounded = 0;
-        $recall   = 0;
-        foreach ($this->successfulResults() as $result) {
-            $result->grounded ? $grounded++ : $recall++;
-        }
-        return ['grounded' => $grounded, 'recall' => $recall];
-    }
-
-    /** Average score per provider */
     public function scoreByProvider(): array
     {
         $scores = [];
-        foreach ($this->resultsByProvider() as $id => $results) {
-            $ok = array_filter($results, fn($r) => $r->isSuccess());
-            $scores[$id] = empty($ok)
+        foreach ($this->resultsByProvider() as $providerId => $results) {
+            $successful = array_filter($results, static fn(BrandQueryResult $r): bool => $r->isSuccess());
+            $scores[$providerId] = $successful === []
                 ? null
-                : (int) round(array_sum(array_map(fn($r) => $r->score, $ok)) / count($ok));
+                : (int) round(
+                    array_sum(array_map(static fn(BrandQueryResult $r): int => $r->score, $successful))
+                    / count($successful)
+                );
         }
+
         return $scores;
+    }
+
+    /**
+     * Mean share of voice across successful cells, 0-100.
+     *
+     * @return float
+     */
+    public function averageShareOfVoice(): float
+    {
+        $successful = $this->successfulResults();
+        if ($successful === []) {
+            return 0.0;
+        }
+
+        $sum = 0.0;
+        foreach ($successful as $result) {
+            $sum += (float) ($result->meta['share_of_voice'] ?? 0.0);
+        }
+
+        return round($sum / count($successful), 1);
+    }
+
+    /**
+     * Share of successful cells where the brand was named before every competitor.
+     *
+     * @return float
+     */
+    public function winRate(): float
+    {
+        $successful = $this->successfulResults();
+        if ($successful === []) {
+            return 0.0;
+        }
+
+        $wins = count(array_filter(
+            $successful,
+            static fn(BrandQueryResult $r): bool => !empty($r->meta['brand_is_winner'])
+        ));
+
+        return round($wins / count($successful) * 100, 1);
+    }
+
+    /**
+     * Competitor name to number of cells where they appeared, most frequent first.
+     *
+     * @return array<string, int>
+     */
+    public function competitorMentionCounts(): array
+    {
+        $counts = [];
+        foreach ($this->successfulResults() as $result) {
+            foreach ((array) ($result->meta['competitors_found'] ?? []) as $name) {
+                $key = (string) $name;
+                $counts[$key] = ($counts[$key] ?? 0) + 1;
+            }
+        }
+        arsort($counts);
+
+        return $counts;
+    }
+
+    /**
+     * Number of successful cells with a flagged accuracy issue.
+     *
+     * @return int
+     */
+    public function accuracyIssueCount(): int
+    {
+        $count = 0;
+        foreach ($this->successfulResults() as $result) {
+            if (!empty($result->meta['accuracy']['has_issue'])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Count of successful cells per tone value.
+     *
+     * @return array<string, int>
+     */
+    public function toneCounts(): array
+    {
+        $counts = ['positive' => 0, 'neutral' => 0, 'negative' => 0];
+        foreach ($this->successfulResults() as $result) {
+            $tone = $result->getTone();
+            if (isset($counts[$tone])) {
+                $counts[$tone]++;
+            }
+        }
+
+        return $counts;
     }
 }

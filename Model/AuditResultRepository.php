@@ -1,223 +1,335 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
 
 declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model;
 
-use Magento\Framework\Serialize\SerializerInterface;
+use Angeo\AeoBrandVisibility\Api\AuditResultRepositoryInterface;
+use Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult as AuditResultResource;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\Collection;
 use Angeo\AeoBrandVisibility\Model\ResourceModel\AuditResult\CollectionFactory;
 use Angeo\AeoBrandVisibility\Model\Result\BrandVisibilityReport;
+use Angeo\AeoBrandVisibility\Service\ReportSerializer;
+use Magento\Framework\Exception\CouldNotSaveException;
+use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\Phrase;
+use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Framework\Stdlib\DateTime\DateTime;
 
 /**
- * Persists and retrieves BrandVisibilityReport records.
- * Keeps only the last MAX_RECORDS rows — prunes on every save.
+ * Persists brand visibility runs.
+ *
+ * Every read and every retention pass is scoped to a store view, so a
+ * multi-store installation no longer mixes brands in one trend line.
  */
-class AuditResultRepository
+class AuditResultRepository implements AuditResultRepositoryInterface
 {
-    private const MAX_RECORDS = 90;
+    private const SIGNALS = [
+        'mentioned',
+        'recommended',
+        'url_cited',
+        'first_result',
+        'positive_sentiment',
+        'negative_sentiment',
+    ];
 
+    /**
+     * @param AuditResultFactory $factory Model factory.
+     * @param AuditResultResource $resource Resource model.
+     * @param CollectionFactory $collectionFactory Collection factory.
+     * @param ReportSerializer $reportSerializer Report to array conversion.
+     * @param SerializerInterface $serializer JSON column encoding.
+     * @param DateTime $dateTime Framework clock.
+     */
     public function __construct(
-        private readonly AuditResultFactory  $factory,
+        private readonly AuditResultFactory $factory,
         private readonly AuditResultResource $resource,
-        private readonly CollectionFactory   $collectionFactory,
-        private readonly SerializerInterface $json,
-    ) {}
-
-    // ── Save ──────────────────────────────────────────────────────────────
-
-    public function saveReport(BrandVisibilityReport $report, string $triggeredBy = 'admin'): AuditResult
-    {
-        $model = $this->factory->create();
-
-        $signalRates = [
-            'mentioned'          => $report->signalRate('mentioned'),
-            'recommended'        => $report->signalRate('recommended'),
-            'url_cited'          => $report->signalRate('url_cited'),
-            'first_result'       => $report->signalRate('first_result'),
-            'positive_sentiment' => $report->signalRate('positive_sentiment'),
-        ];
-
-        $resultsData = array_map(fn($r) => [
-            'provider_id'    => $r->providerId,
-            'provider_label' => $r->providerLabel,
-            'prompt_key'     => $r->promptKey,
-            'prompt'         => $r->prompt,
-            'raw_response'   => $r->rawResponse,
-            'signals'        => $r->signals,
-            'score'          => $r->score,
-            'error'          => $r->errorMessage,
-            'citations'      => $r->citations,
-            'grounded'       => $r->grounded,
-            'competitors'    => $r->competitorMentions,
-            'cited_domains'  => $r->citedDomains,
-            'attempts'       => $r->attempts,
-        ], $report->results);
-
-        $model->setData([
-            'brand_name'      => (string) $report->brandName,
-            'brand_domain'    => (string) $report->brandDomain,
-            'overall_score'   => $report->getOverallScore(),
-            'grade'           => $report->getGrade(),
-            'provider_scores' => $this->json->serialize($report->scoreByProvider()),
-            'signal_rates'    => $this->json->serialize($signalRates),
-            'share_of_voice'  => $this->json->serialize($report->shareOfVoice()),
-            'results_json'    => $this->json->serialize($resultsData),
-            'triggered_by'    => $triggeredBy,
-            'queries_count'   => count($report->results),
-            'errors_count'    => count($report->failedResults()),
-            'from_cache'      => $report->fromCache ? 1 : 0,
-            'store_id'        => $report->storeId,
-            'created_at'      => $report->generatedAt->format('Y-m-d H:i:s'),
-        ]);
-
-        $this->resource->save($model);
-        $this->pruneOldRecords();
-
-        return $model;
+        private readonly CollectionFactory $collectionFactory,
+        private readonly ReportSerializer $reportSerializer,
+        private readonly SerializerInterface $serializer,
+        private readonly DateTime $dateTime
+    ) {
     }
 
-    // ── Read ──────────────────────────────────────────────────────────────
-
-    public function getById(int $id): AuditResult
+    /**
+     * @inheritDoc
+     */
+    public function getById(int $id): AuditResultInterface
     {
         $model = $this->factory->create();
         $this->resource->load($model, $id);
+
         if (!$model->getId()) {
-            throw new \RuntimeException("Audit result #{$id} not found.");
+            throw new NoSuchEntityException(new Phrase('Audit run with id "%1" does not exist.', [$id]));
         }
+
         return $model;
     }
 
     /**
-     * The most recent non-cached, non-error record for the given store scope
-     * strictly BEFORE $beforeId — the baseline an alert compares against
-     * (since 3.0.0). Returns null when there is no prior run.
+     * @inheritDoc
      */
-    public function getPreviousResult(int $beforeId, ?int $storeId): ?AuditResult
+    public function createPendingRun(int $storeId, string $triggeredBy): AuditResultInterface
     {
-        /** @var Collection $collection */
-        $collection = $this->collectionFactory->create();
-        $collection->addFieldToFilter('id', ['lt' => $beforeId]);
-        $collection->addFieldToFilter('from_cache', 0);
-        if ($storeId === null) {
-            $collection->addFieldToFilter('store_id', ['null' => true]);
-        } else {
-            $collection->addFieldToFilter('store_id', $storeId);
+        $model = $this->factory->create();
+        $model->setData([
+            AuditResultInterface::RUN_UUID => $this->generateUuid(),
+            AuditResultInterface::STATUS => AuditResultInterface::STATUS_PENDING,
+            AuditResultInterface::STORE_ID => $storeId,
+            AuditResultInterface::TRIGGERED_BY => $triggeredBy,
+            AuditResultInterface::CREATED_AT => $this->dateTime->gmtDate(),
+        ]);
+
+        try {
+            $this->resource->save($model);
+        } catch (\Throwable $e) {
+            throw new CouldNotSaveException(
+                new Phrase('Could not queue the audit run: %1', [$e->getMessage()]),
+                $e
+            );
         }
-        $collection->setOrder('id', 'DESC');
-        $collection->setPageSize(1);
-        $collection->setCurPage(1);
 
-        $row = $collection->getFirstItem();
-        return $row->getId() ? $row : null;
+        return $model;
     }
 
     /**
-     * Latest N records, newest first.
+     * @inheritDoc
      */
-    public function getLatest(int $limit = 20): Collection
-    {
-        /** @var Collection $collection */
-        $collection = $this->collectionFactory->create();
-        $collection->setOrder('created_at', 'DESC');
-        $collection->setPageSize($limit);
-        $collection->setCurPage(1);
-        return $collection;
-    }
+    public function saveReport(
+        BrandVisibilityReport $report,
+        string $triggeredBy = 'admin',
+        int $storeId = 0,
+        ?int $id = null
+    ): AuditResultInterface {
+        $model = $id !== null ? $this->loadForUpdate($id) : $this->factory->create();
 
-    /**
-     * Newest non-cached record overall or for a store scope (since 3.0.0) —
-     * backing for the REST "latest" endpoint. Null when none exists.
-     */
-    public function getLatestForStore(?int $storeId): ?AuditResult
-    {
-        /** @var Collection $collection */
-        $collection = $this->collectionFactory->create();
-        $collection->addFieldToFilter('from_cache', 0);
-        if ($storeId !== null) {
-            $collection->addFieldToFilter('store_id', $storeId);
+        $signalRates = [];
+        foreach (self::SIGNALS as $signal) {
+            $signalRates[$signal] = $report->signalRate($signal);
         }
-        $collection->setOrder('id', 'DESC');
-        $collection->setPageSize(1);
-        $collection->setCurPage(1);
 
-        $row = $collection->getFirstItem();
-        return $row->getId() ? $row : null;
+        $data = [
+            AuditResultInterface::STATUS => AuditResultInterface::STATUS_COMPLETE,
+            AuditResultInterface::ERROR_MESSAGE => null,
+            AuditResultInterface::BRAND_NAME => $report->brandName,
+            AuditResultInterface::BRAND_DOMAIN => $report->brandDomain,
+            AuditResultInterface::STORE_ID => $storeId,
+            AuditResultInterface::OVERALL_SCORE => $report->getOverallScore(),
+            AuditResultInterface::SCORE_MARGIN => $report->getScoreMargin(),
+            AuditResultInterface::GRADE => $report->getGrade(),
+            AuditResultInterface::SAMPLES => $report->samples,
+            AuditResultInterface::SHARE_OF_VOICE => $report->averageShareOfVoice(),
+            AuditResultInterface::WIN_RATE => $report->winRate(),
+            AuditResultInterface::ACCURACY_ISSUES => $report->accuracyIssueCount(),
+            AuditResultInterface::PROVIDER_SCORES => $this->serializer->serialize($report->scoreByProvider()),
+            AuditResultInterface::SIGNAL_RATES => $this->serializer->serialize($signalRates),
+            AuditResultInterface::RESULTS_JSON => $this->serializer->serialize(
+                $this->reportSerializer->toArray($report)['results']
+            ),
+            AuditResultInterface::TRIGGERED_BY => $triggeredBy,
+            AuditResultInterface::QUERIES_COUNT => count($report->results),
+            AuditResultInterface::ERRORS_COUNT => count($report->failedResults()),
+            AuditResultInterface::FROM_CACHE => $report->fromCache ? 1 : 0,
+        ];
+
+        if ($id === null) {
+            $data[AuditResultInterface::RUN_UUID] = $this->generateUuid();
+            $data[AuditResultInterface::CREATED_AT] = $report->generatedAt->format('Y-m-d H:i:s');
+        }
+
+        $model->addData($data);
+
+        try {
+            $this->resource->save($model);
+        } catch (\Throwable $e) {
+            throw new CouldNotSaveException(
+                new Phrase('Could not save the audit run: %1', [$e->getMessage()]),
+                $e
+            );
+        }
+
+        return $model;
     }
 
     /**
-     * Statistics over the last N records for trend charts.
-     *
-     * @return array{
-     *     avg_score: float,
-     *     max_score: int,
-     *     min_score: int,
-     *     trend: array<array{date: string, score: int, grade: string}>,
-     *     signal_averages: array<string, float>,
-     *     total_runs: int,
-     * }
+     * @inheritDoc
      */
-    public function getStatistics(int $lastN = 30): array
+    public function markFailed(int $id, string $message): void
     {
-        /** @var Collection $collection */
-        $collection = $this->collectionFactory->create();
-        $collection->addFieldToFilter('from_cache', 0); // Only count non-cached runs
-        $collection->setOrder('created_at', 'DESC');
-        $collection->setPageSize($lastN);
+        try {
+            $model = $this->loadForUpdate($id);
+            $model->addData([
+                AuditResultInterface::STATUS => AuditResultInterface::STATUS_ERROR,
+                AuditResultInterface::ERROR_MESSAGE => mb_substr($message, 0, 2000),
+            ]);
+            $this->resource->save($model);
+        } catch (\Throwable) {
+            return;
+        }
+    }
 
-        $scores        = [];
-        $trend         = [];
-        $signalTotals  = [];
-        $signalCounts  = [];
+    /**
+     * @inheritDoc
+     */
+    public function getLatest(int $storeId = 0, int $limit = 20): array
+    {
+        $collection = $this->buildScopedCollection($storeId);
+        $collection->setOrder('created_at', Collection::SORT_ORDER_DESC);
+        $collection->setPageSize(max(1, $limit));
+        $collection->setCurPage(1);
 
+        return array_values($collection->getItems());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getStatistics(int $storeId = 0, int $lastN = 30): array
+    {
+        $collection = $this->buildScopedCollection($storeId);
+        $collection->setOrder('created_at', Collection::SORT_ORDER_DESC);
+        $collection->setPageSize(max(1, $lastN));
+        $collection->setCurPage(1);
+
+        $scores = [];
+        $margins = [];
+        $trend = [];
+        $signalTotals = [];
+
+        /** @var AuditResult $row */
         foreach ($collection as $row) {
-            $scores[] = (int) $row->getOverallScore();
-            $trend[]  = [
-                'date'  => substr($row->getCreatedAt(), 0, 10),
-                'score' => (int) $row->getOverallScore(),
+            $score = (int) $row->getOverallScore();
+            $scores[] = $score;
+            $margins[] = (float) $row->getData(AuditResultInterface::SCORE_MARGIN);
+
+            $trend[] = [
+                'date' => substr((string) $row->getData(AuditResultInterface::CREATED_AT), 0, 16),
+                'score' => $score,
+                'margin' => (float) $row->getData(AuditResultInterface::SCORE_MARGIN),
                 'grade' => $row->getGrade(),
             ];
 
-            $rates = $row->getSignalRatesDecoded();
-            foreach ($rates as $signal => $rate) {
-                $signalTotals[$signal]  = ($signalTotals[$signal]  ?? 0) + $rate;
-                $signalCounts[$signal]  = ($signalCounts[$signal]  ?? 0) + 1;
+            foreach ($row->getSignalRatesDecoded() as $signal => $rate) {
+                $signalTotals[(string) $signal][] = (float) $rate;
             }
         }
 
         $signalAverages = [];
-        foreach ($signalTotals as $signal => $total) {
-            $signalAverages[$signal] = round($total / $signalCounts[$signal], 1);
+        foreach ($signalTotals as $signal => $values) {
+            $signalAverages[$signal] = round(array_sum($values) / count($values), 1);
         }
 
+        $count = count($scores);
+
         return [
-            'avg_score'       => empty($scores) ? 0 : round(array_sum($scores) / count($scores), 1),
-            'max_score'       => empty($scores) ? 0 : max($scores),
-            'min_score'       => empty($scores) ? 0 : min($scores),
-            'trend'           => array_reverse($trend), // chronological order
+            'avg_score' => $count === 0 ? 0.0 : round(array_sum($scores) / $count, 1),
+            'avg_margin' => $count === 0 ? 0.0 : round(array_sum($margins) / $count, 1),
+            'max_score' => $count === 0 ? 0 : max($scores),
+            'min_score' => $count === 0 ? 0 : min($scores),
+            'trend' => array_reverse($trend),
             'signal_averages' => $signalAverages,
-            'total_runs'      => count($scores),
+            'total_runs' => $count,
         ];
     }
 
-    // ── Prune ─────────────────────────────────────────────────────────────
-
-    private function pruneOldRecords(): void
+    /**
+     * @inheritDoc
+     */
+    public function prune(int $maxPerStore, int $maxAgeDays): int
     {
         $connection = $this->resource->getConnection();
-        $table      = $this->resource->getMainTable();
+        $table = $this->resource->getMainTable();
+        $deleted = 0;
 
-        // Find the ID of the Nth record from the top
-        $subQuery = $connection->select()
-            ->from($table, 'id')
-            ->order('id DESC')
-            ->limit(1, self::MAX_RECORDS);
+        $cutoff = $this->dateTime->gmtDate('Y-m-d H:i:s', $this->dateTime->gmtTimestamp() - $maxAgeDays * 86400);
+        $deleted += (int) $connection->delete($table, ['created_at < ?' => $cutoff]);
 
-        $cutoffId = $connection->fetchOne($subQuery);
-        if ($cutoffId) {
-            $connection->delete($table, ['id < ?' => $cutoffId]);
+        $storeIds = $connection->fetchCol(
+            $connection->select()->from($table, 'store_id')->distinct(true)
+        );
+
+        foreach ($storeIds as $storeId) {
+            $keepIds = $connection->fetchCol(
+                $connection->select()
+                    ->from($table, 'id')
+                    ->where('store_id = ?', (int) $storeId)
+                    ->order('id DESC')
+                    ->limit($maxPerStore)
+            );
+
+            if ($keepIds === []) {
+                continue;
+            }
+
+            $deleted += (int) $connection->delete($table, [
+                'store_id = ?' => (int) $storeId,
+                'id NOT IN (?)' => $keepIds,
+            ]);
         }
+
+        return $deleted;
+    }
+
+    /**
+     * Load a row for update, throwing when it no longer exists.
+     *
+     * @param int $id Entity id.
+     * @return AuditResult
+     * @throws CouldNotSaveException
+     */
+    private function loadForUpdate(int $id): AuditResult
+    {
+        $model = $this->factory->create();
+        $this->resource->load($model, $id);
+
+        if (!$model->getId()) {
+            throw new CouldNotSaveException(new Phrase('Audit run with id "%1" does not exist.', [$id]));
+        }
+
+        return $model;
+    }
+
+    /**
+     * Collection limited to completed runs of one store scope.
+     *
+     * @param int $storeId Store view id.
+     * @return Collection
+     */
+    private function buildScopedCollection(int $storeId): Collection
+    {
+        /** @var Collection $collection */
+        $collection = $this->collectionFactory->create();
+        $collection->addFieldToFilter(AuditResultInterface::STORE_ID, $storeId);
+        $collection->addFieldToFilter(
+            AuditResultInterface::STATUS,
+            AuditResultInterface::STATUS_COMPLETE
+        );
+
+        return $collection;
+    }
+
+    /**
+     * Generate a version 4 UUID for cross-referencing a run in logs.
+     *
+     * @return string
+     */
+    private function generateUuid(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+
+        return implode('-', [
+            bin2hex(substr($bytes, 0, 4)),
+            bin2hex(substr($bytes, 4, 2)),
+            bin2hex(substr($bytes, 6, 2)),
+            bin2hex(substr($bytes, 8, 2)),
+            bin2hex(substr($bytes, 10, 6)),
+        ]);
     }
 }

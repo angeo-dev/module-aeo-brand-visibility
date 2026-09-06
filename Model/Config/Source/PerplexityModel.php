@@ -1,15 +1,33 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Model\Config\Source;
+
 use Magento\Framework\Data\OptionSourceInterface;
-class PerplexityModel implements OptionSourceInterface {
-    public function toOptionArray(): array {
+
+/**
+ * Perplexity Sonar models offered in the admin.
+ *
+ * Model identifiers change often. The field accepts any value, so a model
+ * released after this version can be entered by hand.
+ */
+class PerplexityModel implements OptionSourceInterface
+{
+    /**
+     * @inheritDoc
+     */
+    public function toOptionArray(): array
+    {
         return [
-            ['value' => 'sonar',              'label' => 'Sonar — Live web search (Recommended)'],
-            ['value' => 'sonar-pro',          'label' => 'Sonar Pro — Advanced live search'],
-            ['value' => 'sonar-reasoning',    'label' => 'Sonar Reasoning — With chain-of-thought'],
-            ['value' => 'sonar-reasoning-pro','label' => 'Sonar Reasoning Pro'],
-            ['value' => 'sonar-deep-research','label' => 'Sonar Deep Research — Most thorough'],
+            ['value' => 'sonar', 'label' => __('sonar (recommended)')],
+            ['value' => 'sonar-pro', 'label' => __('sonar-pro')],
+            ['value' => 'sonar-reasoning', 'label' => __('sonar-reasoning')],
+            ['value' => 'sonar-reasoning-pro', 'label' => __('sonar-reasoning-pro')],
         ];
     }
 }

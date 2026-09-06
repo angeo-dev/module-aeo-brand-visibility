@@ -1,17 +1,36 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Model\Config\Source;
+
 use Magento\Framework\Data\OptionSourceInterface;
-class GptModel implements OptionSourceInterface {
-    public function toOptionArray(): array {
+
+/**
+ * OpenAI chat models offered in the admin.
+ *
+ * Model identifiers change often. The field accepts any value, so a model
+ * released after this version can be entered by hand.
+ */
+class GptModel implements OptionSourceInterface
+{
+    /**
+     * @inheritDoc
+     */
+    public function toOptionArray(): array
+    {
         return [
-            ['value' => 'gpt-4.1',           'label' => 'GPT-4.1 — Latest (Recommended)'],
-            ['value' => 'gpt-4.1-mini',       'label' => 'GPT-4.1 Mini — Faster/Cheaper'],
-            ['value' => 'gpt-4.1-nano',       'label' => 'GPT-4.1 Nano — Fastest/Cheapest'],
-            ['value' => 'gpt-4o',             'label' => 'GPT-4o'],
-            ['value' => 'gpt-4o-mini',        'label' => 'GPT-4o Mini'],
-            ['value' => 'o4-mini',            'label' => 'o4-mini — Reasoning model'],
-            ['value' => 'o3-mini',            'label' => 'o3-mini — Reasoning model'],
+            ['value' => 'gpt-4.1', 'label' => __('gpt-4.1')],
+            ['value' => 'gpt-4.1-mini', 'label' => __('gpt-4.1-mini (recommended)')],
+            ['value' => 'gpt-4.1-nano', 'label' => __('gpt-4.1-nano')],
+            ['value' => 'gpt-4o', 'label' => __('gpt-4o')],
+            ['value' => 'gpt-4o-mini', 'label' => __('gpt-4o-mini')],
+            ['value' => 'gpt-4o-search-preview', 'label' => __('gpt-4o-search-preview (web grounded)')],
+            ['value' => 'gpt-4o-mini-search-preview', 'label' => __('gpt-4o-mini-search-preview (web grounded)')],
         ];
     }
 }

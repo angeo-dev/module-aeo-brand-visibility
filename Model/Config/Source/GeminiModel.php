@@ -1,15 +1,33 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Model\Config\Source;
+
 use Magento\Framework\Data\OptionSourceInterface;
-class GeminiModel implements OptionSourceInterface {
-    public function toOptionArray(): array {
+
+/**
+ * Google Gemini models offered in the admin.
+ *
+ * Model identifiers change often. The field accepts any value, so a model
+ * released after this version can be entered by hand.
+ */
+class GeminiModel implements OptionSourceInterface
+{
+    /**
+     * @inheritDoc
+     */
+    public function toOptionArray(): array
+    {
         return [
-            ['value' => 'gemini-2.5-flash-preview-05-20', 'label' => 'Gemini 2.5 Flash Preview (Recommended)'],
-            ['value' => 'gemini-2.0-flash',                'label' => 'Gemini 2.0 Flash — Fast & free'],
-            ['value' => 'gemini-2.0-flash-lite',           'label' => 'Gemini 2.0 Flash Lite — Fastest/cheapest'],
-            ['value' => 'gemini-2.5-pro-preview-05-06',    'label' => 'Gemini 2.5 Pro Preview — Most capable'],
-            ['value' => 'gemini-1.5-flash',                'label' => 'Gemini 1.5 Flash'],
+            ['value' => 'gemini-2.0-flash', 'label' => __('gemini-2.0-flash (recommended)')],
+            ['value' => 'gemini-2.0-flash-lite', 'label' => __('gemini-2.0-flash-lite')],
+            ['value' => 'gemini-2.5-flash', 'label' => __('gemini-2.5-flash')],
+            ['value' => 'gemini-2.5-pro', 'label' => __('gemini-2.5-pro')],
         ];
     }
 }

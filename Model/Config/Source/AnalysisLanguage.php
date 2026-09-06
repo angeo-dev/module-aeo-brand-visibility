@@ -1,28 +1,52 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
 
 declare(strict_types=1);
 
 namespace Angeo\AeoBrandVisibility\Model\Config\Source;
 
-use Angeo\AeoBrandVisibility\Service\Analysis\PhrasePack;
+use Angeo\AeoBrandVisibility\Service\Analysis\PhraseLibrary;
 use Magento\Framework\Data\OptionSourceInterface;
 
 /**
- * Language options for the multilingual response analysis (since 1.3.0).
- * Options are driven by the phrase packs actually shipped in PhrasePack,
- * so the admin can never select a language the analyzer cannot handle.
+ * Languages the phrase analyser can score, derived from the phrase library itself
+ * so the option list can never drift from the code.
  */
 class AnalysisLanguage implements OptionSourceInterface
 {
+    private const LABELS = [
+        'en' => 'English',
+        'uk' => 'Ukrainian',
+        'nl' => 'Dutch',
+        'de' => 'German',
+        'fr' => 'French',
+        'es' => 'Spanish',
+    ];
+
     /**
-     * @return array<int, array{value: string, label: string}>
+     * @param PhraseLibrary $phraseLibrary Source of the supported language codes.
+     */
+    public function __construct(private readonly PhraseLibrary $phraseLibrary)
+    {
+    }
+
+    /**
+     * @inheritDoc
      */
     public function toOptionArray(): array
     {
-        $options = [];
-        foreach (PhrasePack::LANGUAGES as $code => $label) {
-            $options[] = ['value' => $code, 'label' => $label];
+        $options = [['value' => 'auto', 'label' => __('Auto (store locale)')]];
+
+        foreach ($this->phraseLibrary->getSupportedLanguages() as $code) {
+            $options[] = [
+                'value' => $code,
+                'label' => __(self::LABELS[$code] ?? strtoupper($code)),
+            ];
         }
+
         return $options;
     }
 }

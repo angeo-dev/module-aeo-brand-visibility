@@ -1,38 +1,71 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
 <schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
 
     <table name="angeo_brand_visibility_audit" resource="default" engine="innodb"
            comment="Angeo Brand Visibility Audit Results">
 
-        <column xsi:type="int"       name="id"             unsigned="true" nullable="false" identity="true" comment="ID"/>
-        <column xsi:type="varchar"   name="brand_name"     nullable="false" length="255" default="" comment="Brand Name"/>
-        <column xsi:type="varchar"   name="brand_domain"   nullable="false" length="255" default="" comment="Brand Domain"/>
-        <column xsi:type="smallint"  name="overall_score"  nullable="false" default="0"  comment="Overall Score 0-100"/>
-        <column xsi:type="varchar"   name="grade"          nullable="false" length="1"   default="F" comment="Grade A-F"/>
-        <column xsi:type="text"      name="provider_scores" nullable="true" comment="Provider scores JSON"/>
-        <column xsi:type="text"      name="signal_rates"   nullable="true" comment="Signal rates JSON"/>
-        <column xsi:type="text"      name="share_of_voice" nullable="true" comment="Share of voice JSON (since 2.0.0): brand + competitors mention rates"/>
-        <column xsi:type="mediumtext" name="results_json"  nullable="true" comment="Full results JSON"/>
-        <column xsi:type="varchar"   name="triggered_by"   nullable="false" length="64" default="admin" comment="Triggered by: admin|cron|cli"/>
-        <column xsi:type="smallint"  name="queries_count"  nullable="false" default="0" comment="Total queries run"/>
-        <column xsi:type="smallint"  name="errors_count"   nullable="false" default="0" comment="Failed queries count"/>
-        <column xsi:type="smallint"  name="from_cache"     nullable="false" default="0" comment="1 if result was served from cache"/>
-        <column xsi:type="int"       name="store_id"       unsigned="true" nullable="true" comment="Store view this run was scoped to (since 3.0.0); null = default scope"/>
-        <column xsi:type="datetime"  name="created_at"     nullable="true" comment="Audit timestamp"/>
+        <column xsi:type="int" name="id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="run_uuid" nullable="false" length="36" default="" comment="Run UUID"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="16" default="complete"
+                comment="pending|running|complete|error"/>
+        <column xsi:type="text" name="error_message" nullable="true" comment="Failure reason when status=error"/>
+
+        <column xsi:type="varchar" name="brand_name" nullable="false" length="255" default="" comment="Brand Name"/>
+        <column xsi:type="varchar" name="brand_domain" nullable="false" length="255" default="" comment="Brand Domain"/>
+        <column xsi:type="smallint" name="store_id" unsigned="true" nullable="false" default="0"
+                comment="Store View ID (0 = default scope)"/>
+
+        <column xsi:type="smallint" name="overall_score" nullable="false" default="0" comment="Overall Score 0-100"/>
+        <column xsi:type="decimal" name="score_margin" scale="1" precision="5" nullable="false" default="0"
+                comment="Confidence half-width of the overall score"/>
+        <column xsi:type="varchar" name="grade" nullable="false" length="1" default="F" comment="Grade A-F"/>
+        <column xsi:type="smallint" name="samples" unsigned="true" nullable="false" default="1"
+                comment="Repeats per provider x prompt"/>
+
+        <column xsi:type="decimal" name="share_of_voice" scale="1" precision="5" nullable="false" default="0"
+                comment="Mention-weighted share of voice 0-100"/>
+        <column xsi:type="decimal" name="win_rate" scale="1" precision="5" nullable="false" default="0"
+                comment="Share of answers where the brand ranked first"/>
+        <column xsi:type="smallint" name="accuracy_issues" unsigned="true" nullable="false" default="0"
+                comment="Answers with a flagged accuracy issue"/>
+
+        <column xsi:type="text" name="provider_scores" nullable="true" comment="Provider scores JSON"/>
+        <column xsi:type="text" name="signal_rates" nullable="true" comment="Signal rates JSON"/>
+        <column xsi:type="mediumtext" name="results_json" nullable="true" comment="Full results JSON incl. meta"/>
+
+        <column xsi:type="varchar" name="triggered_by" nullable="false" length="64" default="admin"
+                comment="Triggered by: admin|cron|cli|audit"/>
+        <column xsi:type="smallint" name="queries_count" unsigned="true" nullable="false" default="0"
+                comment="Total queries run"/>
+        <column xsi:type="smallint" name="errors_count" unsigned="true" nullable="false" default="0"
+                comment="Failed queries count"/>
+        <column xsi:type="smallint" name="from_cache" unsigned="true" nullable="false" default="0"
+                comment="1 if result was served from cache"/>
+        <column xsi:type="datetime" name="created_at" nullable="true" comment="Audit timestamp"/>
 
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
         </constraint>
 
-        <index referenceId="ANGEO_BRAND_VIS_CREATED_AT" indexType="btree">
+        <index referenceId="ANGEO_BRAND_VIS_STORE_ID_CREATED_AT" indexType="btree">
+            <column name="store_id"/>
             <column name="created_at"/>
         </index>
-        <index referenceId="ANGEO_BRAND_VIS_OVERALL_SCORE" indexType="btree">
-            <column name="overall_score"/>
+        <index referenceId="ANGEO_BRAND_VIS_STATUS" indexType="btree">
+            <column name="status"/>
         </index>
-        <index referenceId="ANGEO_BRAND_VIS_STORE_ID" indexType="btree">
-            <column name="store_id"/>
+        <index referenceId="ANGEO_BRAND_VIS_RUN_UUID" indexType="btree">
+            <column name="run_uuid"/>
+        </index>
+        <index referenceId="ANGEO_BRAND_VIS_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
         </index>
     </table>
 </schema>

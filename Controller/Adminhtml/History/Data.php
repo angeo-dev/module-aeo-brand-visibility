@@ -1,56 +1,78 @@
 <?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
 declare(strict_types=1);
+
 namespace Angeo\AeoBrandVisibility\Controller\Adminhtml\History;
 
+use Angeo\AeoBrandVisibility\Api\AuditResultRepositoryInterface;
+use Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\Controller\Result\Json;
 use Magento\Framework\Controller\Result\JsonFactory;
-use Angeo\AeoBrandVisibility\Model\AuditResultRepository;
-use Psr\Log\LoggerInterface;
 
+/**
+ * Supplies the history table and trend statistics for one store scope.
+ */
 class Data extends Action implements HttpGetActionInterface
 {
-    const ADMIN_RESOURCE = 'Angeo_AeoBrandVisibility::run';
+    public const ADMIN_RESOURCE = 'Angeo_AeoBrandVisibility::view';
 
+    private const HISTORY_LIMIT = 50;
+    private const STATISTICS_LIMIT = 30;
+
+    /**
+     * @param Context $context Backend action context.
+     * @param JsonFactory $jsonFactory JSON result factory.
+     * @param AuditResultRepositoryInterface $repository Run persistence.
+     */
     public function __construct(
         Context $context,
         private readonly JsonFactory $jsonFactory,
-        private readonly AuditResultRepository $repository,
-        private readonly LoggerInterface $logger
+        private readonly AuditResultRepositoryInterface $repository
     ) {
         parent::__construct($context);
     }
 
-    public function execute()
+    /**
+     * @inheritDoc
+     */
+    public function execute(): Json
     {
         $result = $this->jsonFactory->create();
+        $storeId = (int) $this->getRequest()->getParam('store', 0);
+
         try {
-            $latest = $this->repository->getLatest(50);
-            $stats  = $this->repository->getStatistics(30);
-            $rows   = [];
-            foreach ($latest as $row) {
+            $rows = [];
+            foreach ($this->repository->getLatest($storeId, self::HISTORY_LIMIT) as $row) {
                 $rows[] = [
-                    'id'             => $row->getId(),
-                    'created_at'     => $row->getCreatedAt(),
-                    'overall_score'  => $row->getOverallScore(),
-                    'grade'          => $row->getGrade(),
-                    'triggered_by'   => $row->getTriggeredBy(),
-                    'queries_count'  => $row->getQueriesCount(),
-                    'errors_count'   => $row->getErrorsCount(),
-                    'from_cache'     => (bool) $row->getFromCache(),
-                    'signal_rates'   => $row->getSignalRatesDecoded(),
-                    'provider_scores'=> $row->getProviderScoresDecoded(),
+                    'id' => (int) $row->getData(AuditResultInterface::ID),
+                    'created_at' => (string) $row->getData(AuditResultInterface::CREATED_AT),
+                    'overall_score' => $row->getOverallScore(),
+                    'score_margin' => (float) $row->getData(AuditResultInterface::SCORE_MARGIN),
+                    'grade' => $row->getGrade(),
+                    'samples' => (int) $row->getData(AuditResultInterface::SAMPLES),
+                    'triggered_by' => (string) $row->getData(AuditResultInterface::TRIGGERED_BY),
+                    'queries_count' => (int) $row->getData(AuditResultInterface::QUERIES_COUNT),
+                    'errors_count' => (int) $row->getData(AuditResultInterface::ERRORS_COUNT),
+                    'share_of_voice' => (float) $row->getData(AuditResultInterface::SHARE_OF_VOICE),
+                    'win_rate' => (float) $row->getData(AuditResultInterface::WIN_RATE),
+                    'signal_rates' => $row->getSignalRatesDecoded(),
                 ];
             }
-            $result->setData(['success' => true, 'history' => $rows, 'statistics' => $stats]);
-        } catch (\Throwable $e) {
-            $this->logger->error('[BrandVis] History load failed', ['error' => $e->getMessage()]);
-            $result->setData([
-                'success' => false,
-                'message' => (string) __('History could not be loaded. See the Brand Visibility log for details.'),
+
+            return $result->setData([
+                'success' => true,
+                'history' => $rows,
+                'statistics' => $this->repository->getStatistics($storeId, self::STATISTICS_LIMIT),
             ]);
+        } catch (\Throwable $e) {
+            return $result->setData(['success' => false, 'message' => $e->getMessage()]);
         }
-        return $result;
     }
 }

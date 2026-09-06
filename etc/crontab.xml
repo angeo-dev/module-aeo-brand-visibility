@@ -1,11 +1,22 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
-    <group id="default">
+    <group id="angeo_brand_visibility">
         <job name="angeo_brand_visibility_audit"
              instance="Angeo\AeoBrandVisibility\Cron\RunBrandVisibilityAudit"
              method="execute">
             <config_path>angeo_brand_vis/cron/schedule</config_path>
+        </job>
+        <job name="angeo_brand_visibility_cleanup"
+             instance="Angeo\AeoBrandVisibility\Cron\CleanupAuditResults"
+             method="execute">
+            <schedule>30 3 * * *</schedule>
         </job>
     </group>
 </config>
