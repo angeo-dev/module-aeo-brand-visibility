@@ -1,0 +1,109 @@
+<?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ *
+ * Detail view of one stored audit run. No inline script or style.
+ *
+ * @var \Angeo\AeoBrandVisibility\Block\Adminhtml\RecordView $block
+ */
+$record = $block->getRecord();
+?>
+<?php if ($record === null): ?>
+    <div class="message message-error">
+        <?= $block->escapeHtml(__('That audit run could not be loaded.')) ?>
+    </div>
+<?php else: ?>
+    <div class="angeo-bv">
+        <div class="angeo-bv-toolbar">
+            <a class="action-secondary" href="<?= $block->escapeUrl($block->getBackUrl()) ?>">
+                <?= $block->escapeHtml(__('Back to history')) ?>
+            </a>
+            <a class="action-primary" href="<?= $block->escapeUrl($block->getExportUrl()) ?>">
+                <?= $block->escapeHtml(__('Export CSV')) ?>
+            </a>
+        </div>
+
+        <div class="angeo-bv-panel">
+            <div class="angeo-bv-score">
+                <span class="angeo-bv-score-value"><?= (int) $record->getOverallScore() ?>/100</span>
+                <span class="angeo-bv-score-margin">
+                    &plusmn;<?= $block->escapeHtml((string) $record->getData('score_margin')) ?>
+                </span>
+                <span class="angeo-bv-grade angeo-bv-grade-<?= $block->escapeHtmlAttr(strtolower($record->getGrade())) ?>">
+                    <?= $block->escapeHtml($record->getGrade()) ?>
+                </span>
+            </div>
+            <dl class="angeo-bv-meta">
+                <dt><?= $block->escapeHtml(__('Brand')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('brand_name')) ?></dd>
+                <dt><?= $block->escapeHtml(__('Domain')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('brand_domain')) ?></dd>
+                <dt><?= $block->escapeHtml(__('Run at')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('created_at')) ?></dd>
+                <dt><?= $block->escapeHtml(__('Store view')) ?></dt>
+                <dd><?= (int) $record->getStoreId() ?></dd>
+                <dt><?= $block->escapeHtml(__('Samples per query')) ?></dt>
+                <dd><?= (int) $record->getData('samples') ?></dd>
+                <dt><?= $block->escapeHtml(__('Share of voice')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('share_of_voice')) ?>%</dd>
+                <dt><?= $block->escapeHtml(__('Win rate')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('win_rate')) ?>%</dd>
+                <dt><?= $block->escapeHtml(__('Accuracy issues')) ?></dt>
+                <dd><?= (int) $record->getData('accuracy_issues') ?></dd>
+                <dt><?= $block->escapeHtml(__('Triggered by')) ?></dt>
+                <dd><?= $block->escapeHtml((string) $record->getData('triggered_by')) ?></dd>
+            </dl>
+        </div>
+
+        <div class="angeo-bv-panel">
+            <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Answers')) ?></h2>
+            <table class="data-grid angeo-bv-table">
+                <thead>
+                    <tr>
+                        <th><?= $block->escapeHtml(__('Provider')) ?></th>
+                        <th><?= $block->escapeHtml(__('Prompt')) ?></th>
+                        <th><?= $block->escapeHtml(__('Samples')) ?></th>
+                        <th><?= $block->escapeHtml(__('Score')) ?></th>
+                        <th><?= $block->escapeHtml(__('Tone')) ?></th>
+                        <th><?= $block->escapeHtml(__('Share of voice')) ?></th>
+                        <th><?= $block->escapeHtml(__('Winner')) ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($block->getCells() as $cell): ?>
+                    <?php $meta = (array) ($cell['meta'] ?? []); ?>
+                    <tr>
+                        <td><?= $block->escapeHtml((string) ($cell['provider_label'] ?? '')) ?></td>
+                        <td><?= $block->escapeHtml((string) ($cell['prompt_key'] ?? '')) ?></td>
+                        <td><?= (int) ($cell['samples'] ?? 0) ?></td>
+                        <td>
+                            <?php if (!empty($cell['error'])): ?>
+                                <span class="angeo-bv-error"><?= $block->escapeHtml((string) $cell['error']) ?></span>
+                            <?php else: ?>
+                                <?= (int) ($cell['score'] ?? 0) ?>
+                                &plusmn;<?= $block->escapeHtml((string) ($cell['score_margin'] ?? 0)) ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="angeo-bv-tone-<?= $block->escapeHtmlAttr((string) ($meta['tone'] ?? 'neutral')) ?>">
+                            <?= $block->escapeHtml((string) ($meta['tone'] ?? '')) ?>
+                        </td>
+                        <td><?= $block->escapeHtml((string) ($meta['share_of_voice'] ?? 0)) ?>%</td>
+                        <td><?= $block->escapeHtml((string) ($meta['winner'] ?? '')) ?></td>
+                    </tr>
+                    <tr>
+                        <td colspan="7">
+                            <p class="angeo-bv-note">
+                                <?= $block->escapeHtml((string) ($cell['prompt'] ?? '')) ?>
+                            </p>
+                            <?php foreach ((array) ($cell['responses'] ?? []) as $response): ?>
+                                <pre class="angeo-bv-raw"><?= $block->escapeHtml((string) $response) ?></pre>
+                            <?php endforeach; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php endif; ?>

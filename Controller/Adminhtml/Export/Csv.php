@@ -15,6 +15,7 @@ use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\App\Response\Http\FileFactory;
+use Magento\Framework\App\ResponseInterface;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Filesystem;
 use Magento\Framework\Stdlib\DateTime\DateTime;
@@ -67,9 +68,11 @@ class Csv extends Action implements HttpGetActionInterface
     }
 
     /**
-     * @inheritDoc
+     * Returns the file download response from FileFactory, or a redirect.
+     *
+     * @return ResultInterface|ResponseInterface
      */
-    public function execute(): ResultInterface
+    public function execute(): ResultInterface|ResponseInterface
     {
         $id = (int) $this->getRequest()->getParam('id', 0);
         $storeId = (int) $this->getRequest()->getParam('store', 0);

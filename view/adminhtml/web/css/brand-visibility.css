@@ -1,0 +1,224 @@
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ */
+
+.angeo-bv-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.angeo-bv-label {
+    font-weight: 600;
+}
+
+.angeo-bv-checkbox {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
+.angeo-bv-panel {
+    background: #fff;
+    border: 1px solid #d6d6d6;
+    border-radius: 3px;
+    margin-bottom: 20px;
+    padding: 18px 20px;
+}
+
+.angeo-bv-heading {
+    font-size: 1.6rem;
+    margin: 0 0 14px;
+}
+
+.angeo-bv-note {
+    color: #666;
+    font-size: 1.2rem;
+    margin: 0 0 10px;
+}
+
+.angeo-bv-status {
+    border-left: 4px solid #007bdb;
+    margin-bottom: 18px;
+    padding: 10px 14px;
+}
+
+.angeo-bv-status-info {
+    background: #eef6fb;
+    border-left-color: #007bdb;
+}
+
+.angeo-bv-status-success {
+    background: #eef7ee;
+    border-left-color: #79a22e;
+}
+
+.angeo-bv-status-error {
+    background: #fdf0f0;
+    border-left-color: #e22626;
+}
+
+.angeo-bv-score {
+    align-items: baseline;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.angeo-bv-score-value {
+    font-size: 3.6rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.angeo-bv-score-margin {
+    color: #666;
+    font-size: 1.6rem;
+}
+
+.angeo-bv-grade {
+    border-radius: 3px;
+    color: #fff;
+    display: inline-block;
+    font-weight: 700;
+    min-width: 26px;
+    padding: 2px 8px;
+    text-align: center;
+}
+
+.angeo-bv-grade-a {
+    background: #4f8a10;
+}
+
+.angeo-bv-grade-b {
+    background: #79a22e;
+}
+
+.angeo-bv-grade-c {
+    background: #eb5202;
+}
+
+.angeo-bv-grade-d {
+    background: #d64545;
+}
+
+.angeo-bv-grade-f {
+    background: #8f1414;
+}
+
+.angeo-bv-meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    margin: 0;
+    row-gap: 4px;
+}
+
+.angeo-bv-meta dt {
+    color: #666;
+    padding-right: 16px;
+}
+
+.angeo-bv-meta dd {
+    margin: 0;
+}
+
+.angeo-bv-signals {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.angeo-bv-signal {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 160px 60px 1fr;
+    padding: 4px 0;
+}
+
+.angeo-bv-signal-value {
+    font-weight: 600;
+    text-align: right;
+}
+
+.angeo-bv-bar {
+    background: #ececec;
+    border-radius: 2px;
+    display: block;
+    height: 10px;
+    overflow: hidden;
+}
+
+.angeo-bv-bar-fill {
+    background: #007bdb;
+    display: block;
+    height: 100%;
+}
+
+.angeo-bv-table {
+    width: 100%;
+}
+
+.angeo-bv-hidden {
+    display: none;
+}
+
+.angeo-bv-raw {
+    background: #f6f6f6;
+    border: 1px solid #e3e3e3;
+    max-height: 340px;
+    overflow: auto;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.angeo-bv-error {
+    color: #e22626;
+    font-weight: 600;
+}
+
+.angeo-bv-tone-positive {
+    color: #4f8a10;
+}
+
+.angeo-bv-tone-negative {
+    color: #e22626;
+    font-weight: 600;
+}
+
+.angeo-bv-tone-neutral {
+    color: #666;
+}
+
+.angeo-bv-plan {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.angeo-bv-plan-item {
+    border-left: 3px solid #d6d6d6;
+    margin-bottom: 12px;
+    padding-left: 12px;
+}
+
+.angeo-bv-plan-item.angeo-bv-priority-high {
+    border-left-color: #e22626;
+}
+
+.angeo-bv-plan-item.angeo-bv-priority-medium {
+    border-left-color: #eb5202;
+}
+
+.angeo-bv-plan-item.angeo-bv-priority-low {
+    border-left-color: #79a22e;
+}
+
+.angeo-bv-plan-detail {
+    color: #444;
+    display: block;
+    margin-top: 3px;
+}

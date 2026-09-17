@@ -1,7 +1,12 @@
 # Angeo AEO Brand Visibility for Magento 2
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/angeo/module-aeo-brand-visibility.svg)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/angeo-dev/module-aeo-brand-visibility/actions/workflows/ci.yml/badge.svg)](https://github.com/angeo-dev/module-aeo-brand-visibility/actions/workflows/ci.yml)
+[![Packagist Version](https://img.shields.io/packagist/v/angeo/module-aeo-brand-visibility)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
+[![Downloads](https://img.shields.io/packagist/dt/angeo/module-aeo-brand-visibility)](https://packagist.org/packages/angeo/module-aeo-brand-visibility)
+[![PHP](https://img.shields.io/badge/PHP-8.1%20%E2%80%93%208.5-777bb4)](composer.json)
+[![Magento](https://img.shields.io/badge/Magento-2.4.6%20%E2%80%93%202.4.9-f26322)](composer.json)
+[![Mage-OS Directory](https://img.shields.io/badge/Mage--OS-Extension%20Directory-2d7d9a)](https://directory.mage-os.org/packages/angeo/module-aeo-brand-visibility/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Measure whether AI assistants actually name your store when a shopper asks them
 where to buy something.
@@ -74,7 +79,7 @@ that margin is noise, and the alert system will not fire on it.
 ## Requirements
 
 - Magento Open Source or Adobe Commerce 2.4.6 – 2.4.8
-- PHP 8.2, 8.3 or 8.4
+- PHP 8.1 – 8.5
 - `angeo/module-aeo-audit` 3.x or 4.x
 - At least one AI provider API key
 - A running message queue consumer (or inline run mode, see below)

@@ -1,0 +1,121 @@
+<?php
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ *
+ * Brand visibility dashboard.
+ *
+ * No inline script, no inline style and no event attributes: every behaviour is
+ * bound by the RequireJS module named in data-mage-init, so the page works under
+ * a restrictive content security policy.
+ *
+ * @var \Angeo\AeoBrandVisibility\Block\Adminhtml\Dashboard $block
+ */
+?>
+<div class="angeo-bv" data-mage-init='<?= $block->escapeHtmlAttr($block->getJsConfigJson()) ?>'>
+
+    <div class="angeo-bv-toolbar">
+        <label class="angeo-bv-label" for="angeo-bv-store"><?= $block->escapeHtml(__('Store view')) ?></label>
+        <select id="angeo-bv-store" class="admin__control-select" data-role="store-select">
+            <?php foreach ($block->getStoreOptions() as $option): ?>
+                <option value="<?= $block->escapeHtmlAttr((string) $option['value']) ?>"
+                    <?= (int) $option['value'] === $block->getSelectedStoreId() ? 'selected="selected"' : '' ?>>
+                    <?= $block->escapeHtml($option['label']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <label class="angeo-bv-checkbox">
+            <input type="checkbox" class="admin__control-checkbox" data-role="refresh"/>
+            <span><?= $block->escapeHtml(__('Ignore cached result')) ?></span>
+        </label>
+
+        <button type="button" class="action-primary" data-role="run">
+            <span><?= $block->escapeHtml(__('Run audit')) ?></span>
+        </button>
+        <button type="button" class="action-secondary" data-role="load-plan">
+            <span><?= $block->escapeHtml(__('Action plan')) ?></span>
+        </button>
+        <a class="action-secondary" data-role="export" href="#"><?= $block->escapeHtml(__('Export CSV')) ?></a>
+    </div>
+
+    <div class="angeo-bv-status" data-role="status" hidden="hidden"></div>
+
+    <div class="angeo-bv-panel" data-role="summary" hidden="hidden">
+        <div class="angeo-bv-score">
+            <span class="angeo-bv-score-value" data-role="score">—</span>
+            <span class="angeo-bv-score-margin" data-role="margin"></span>
+            <span class="angeo-bv-grade" data-role="grade"></span>
+        </div>
+        <dl class="angeo-bv-meta" data-role="summary-meta"></dl>
+    </div>
+
+    <div class="angeo-bv-panel" data-role="signals-panel" hidden="hidden">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Signals')) ?></h2>
+        <ul class="angeo-bv-signals" data-role="signals"></ul>
+    </div>
+
+    <div class="angeo-bv-panel" data-role="competitive-panel" hidden="hidden">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Competitive position')) ?></h2>
+        <dl class="angeo-bv-meta" data-role="competitive"></dl>
+    </div>
+
+    <div class="angeo-bv-panel" data-role="results-panel" hidden="hidden">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Answers')) ?></h2>
+        <table class="data-grid angeo-bv-table">
+            <thead>
+                <tr>
+                    <th><?= $block->escapeHtml(__('Provider')) ?></th>
+                    <th><?= $block->escapeHtml(__('Prompt')) ?></th>
+                    <th><?= $block->escapeHtml(__('Samples')) ?></th>
+                    <th><?= $block->escapeHtml(__('Score')) ?></th>
+                    <th><?= $block->escapeHtml(__('Mentioned')) ?></th>
+                    <th><?= $block->escapeHtml(__('Recommended')) ?></th>
+                    <th><?= $block->escapeHtml(__('URL cited')) ?></th>
+                    <th><?= $block->escapeHtml(__('First')) ?></th>
+                    <th><?= $block->escapeHtml(__('Tone')) ?></th>
+                    <th><?= $block->escapeHtml(__('Answer')) ?></th>
+                </tr>
+            </thead>
+            <tbody data-role="results"></tbody>
+        </table>
+    </div>
+
+    <div class="angeo-bv-panel" data-role="plan-panel" hidden="hidden">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Action plan')) ?></h2>
+        <ol class="angeo-bv-plan" data-role="plan"></ol>
+    </div>
+
+    <div class="angeo-bv-panel">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Test one query')) ?></h2>
+        <p class="angeo-bv-note">
+            <?= $block->escapeHtml(__('Sends a single billable request so you can read the raw answer.')) ?>
+        </p>
+        <div class="angeo-bv-toolbar">
+            <select class="admin__control-select" data-role="test-provider"></select>
+            <select class="admin__control-select" data-role="test-prompt"></select>
+            <button type="button" class="action-secondary" data-role="test-run">
+                <span><?= $block->escapeHtml(__('Send')) ?></span>
+            </button>
+        </div>
+        <pre class="angeo-bv-raw" data-role="test-output" hidden="hidden"></pre>
+    </div>
+
+    <div class="angeo-bv-panel">
+        <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Recent runs')) ?></h2>
+        <table class="data-grid angeo-bv-table">
+            <thead>
+                <tr>
+                    <th><?= $block->escapeHtml(__('Run at')) ?></th>
+                    <th><?= $block->escapeHtml(__('Score')) ?></th>
+                    <th><?= $block->escapeHtml(__('Grade')) ?></th>
+                    <th><?= $block->escapeHtml(__('Share of voice')) ?></th>
+                    <th><?= $block->escapeHtml(__('Win rate')) ?></th>
+                    <th><?= $block->escapeHtml(__('Triggered by')) ?></th>
+                    <th><?= $block->escapeHtml(__('Action')) ?></th>
+                </tr>
+            </thead>
+            <tbody data-role="history"></tbody>
+        </table>
+    </div>
+</div>

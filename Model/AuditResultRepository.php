@@ -90,7 +90,7 @@ class AuditResultRepository implements AuditResultRepositoryInterface
         } catch (\Throwable $e) {
             throw new CouldNotSaveException(
                 new Phrase('Could not queue the audit run: %1', [$e->getMessage()]),
-                $e
+                $e instanceof \Exception ? $e : null
             );
         }
 
@@ -149,7 +149,7 @@ class AuditResultRepository implements AuditResultRepositoryInterface
         } catch (\Throwable $e) {
             throw new CouldNotSaveException(
                 new Phrase('Could not save the audit run: %1', [$e->getMessage()]),
-                $e
+                $e instanceof \Exception ? $e : null
             );
         }
 
@@ -183,7 +183,10 @@ class AuditResultRepository implements AuditResultRepositoryInterface
         $collection->setPageSize(max(1, $limit));
         $collection->setCurPage(1);
 
-        return array_values($collection->getItems());
+        /** @var AuditResultInterface[] $items */
+        $items = $collection->getItems();
+
+        return array_values($items);
     }
 
     /**
@@ -304,7 +307,7 @@ class AuditResultRepository implements AuditResultRepositoryInterface
     {
         /** @var Collection $collection */
         $collection = $this->collectionFactory->create();
-        $collection->addFieldToFilter(AuditResultInterface::STORE_ID, $storeId);
+        $collection->addFieldToFilter(AuditResultInterface::STORE_ID, ['eq' => $storeId]);
         $collection->addFieldToFilter(
             AuditResultInterface::STATUS,
             AuditResultInterface::STATUS_COMPLETE

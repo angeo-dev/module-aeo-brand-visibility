@@ -15,7 +15,7 @@ namespace Angeo\AeoBrandVisibility\Model\Result;
  * prompt and stores the mean score together with the half-width of its
  * confidence interval. A change smaller than the margin is noise.
  */
-final class BrandQueryResult
+class BrandQueryResult
 {
     /**
      * @param string $providerId Provider identifier.

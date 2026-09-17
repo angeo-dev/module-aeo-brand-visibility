@@ -39,7 +39,7 @@ class Index extends Action implements HttpGetActionInterface
     {
         $page = $this->pageFactory->create();
         $page->setActiveMenu('Angeo_AeoBrandVisibility::history');
-        $page->getConfig()->getTitle()->prepend(__('Brand Visibility History'));
+        $page->getConfig()->getTitle()->prepend((string) __('Brand Visibility History'));
 
         return $page;
     }

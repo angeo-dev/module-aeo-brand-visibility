@@ -11,7 +11,7 @@ namespace Angeo\AeoBrandVisibility\Model\Result;
 /**
  * Aggregated report across every provider and prompt of one run.
  */
-final class BrandVisibilityReport
+class BrandVisibilityReport
 {
     private const GRADE_THRESHOLDS = ['A' => 90, 'B' => 75, 'C' => 60, 'D' => 40];
 

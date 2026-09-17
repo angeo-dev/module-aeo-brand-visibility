@@ -6,7 +6,7 @@
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/communication.xsd">
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Communication/etc/communication.xsd">
     <topic name="angeo.brandvis.audit.run" request="string">
         <handler name="angeoBrandVisRunAudit"
                  type="Angeo\AeoBrandVisibility\MessageQueue\AuditRunConsumer"

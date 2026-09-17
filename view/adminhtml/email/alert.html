@@ -1,0 +1,31 @@
+<!--@subject Brand visibility alert: {{var brand}} scored {{var score}}/100 @-->
+<!--@vars {
+"var brand":"Brand name",
+"var domain":"Brand domain",
+"var score":"Overall score",
+"var margin":"Confidence margin",
+"var grade":"Letter grade",
+"var reasons":"Reasons the alert fired"
+} @-->
+{{template config_path="design/email/header_template"}}
+
+<h2>Brand visibility alert</h2>
+
+<p>
+    The latest AI brand visibility run for <strong>{{var brand}}</strong> ({{var domain}})
+    scored <strong>{{var score}}/100</strong> (margin {{var margin}}), grade <strong>{{var grade}}</strong>.
+</p>
+
+<p>Why this alert was raised:</p>
+<ul>
+    {{for reason in reasons}}
+    <li>{{var reason}}</li>
+    {{/for}}
+</ul>
+
+<p>
+    Open Marketing &gt; AEO Brand Visibility &gt; Audit History in the admin panel
+    to compare this run with the previous ones.
+</p>
+
+{{template config_path="design/email/footer_template"}}

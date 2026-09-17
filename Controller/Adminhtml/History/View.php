@@ -58,7 +58,7 @@ class View extends Action implements HttpGetActionInterface
 
         $page = $this->pageFactory->create();
         $page->setActiveMenu('Angeo_AeoBrandVisibility::history');
-        $page->getConfig()->getTitle()->prepend(__('Audit Run #%1', $id));
+        $page->getConfig()->getTitle()->prepend((string) __('Audit Run #%1', $id));
 
         return $page;
     }

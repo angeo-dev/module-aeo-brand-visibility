@@ -4,6 +4,64 @@ All notable changes to `angeo/module-aeo-brand-visibility` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
+## [4.0.1] — 2026-09-16
+
+A packaging and code-quality release. Scoring, prompts and provider calls do
+not change.
+
+### Fixed
+
+- **4.0.0 on GitHub/Packagist was incomplete.** The `Service/`, `Ui/`,
+  `view/` and `Test/` directories never reached the
+  repository, so the published 4.0.0 referenced classes, templates and grid
+  columns that did not exist, and `setup:di:compile` failed. 4.0.1 contains
+  the full module.
+- **CSV export fatal.** `Export\Csv::execute()` declared `ResultInterface` but
+  returns the `FileFactory` response, which is a `ResponseInterface`, so every
+  export ended in a `TypeError`. The return type is now
+  `ResultInterface|ResponseInterface`.
+- Exception chaining passes the previous error only when it is an
+  `\Exception`, as `LocalizedException` expects; a PHP `Error` no longer
+  causes a second `TypeError` while reporting the first.
+- `etc/communication.xml` points at the correct schema,
+  `urn:magento:framework:Communication/etc/communication.xsd`.
+- `WebhookUrlValidator`: DNS lookup no longer uses the `@` operator; an
+  unresolvable host still yields no addresses.
+
+### Changed
+
+- **PHP 8.1–8.5** (was 8.2–8.4). The code uses no PHP 8.2+ syntax or
+  functions.
+- `BrandVisibilityReport` and `BrandQueryResult` are no longer `final`
+  (Magento coding standard).
+- Collection filters use `['eq' => …]`. Same SQL.
+- Dev tooling: PHPUnit 10.5, PHPStan 2 with `bitexpert/phpstan-magento`,
+  `magento/magento-coding-standard` ^40 || ^41. `phpstan.neon` rewritten to
+  the suite-wide config (level 5); the extension generates Magento factory
+  classes during analysis, so no stub files are needed.
+
+### Added
+
+- GitHub Actions CI (`.github/workflows/ci.yml`) on PHP 8.1–8.5: composer
+  validate, PHP lint, Magento2 coding standard,
+  PHPUnit. PHPStan runs once, in its own job on PHP 8.2, as in
+  the Mage-OS modules.
+
+### Build
+
+- `.gitattributes` with `export-ignore`: the Composer package no longer
+  contains `Test/`, `phpstan.neon` and `phpunit.xml`.
+
+### Documentation
+
+- README: one badge row across the suite — CI, Packagist version and
+  downloads, PHP 8.1 – 8.5, supported Magento range, Mage-OS Extension
+  Directory, license.
+
+### Quality
+
+- Magento2 coding standard: 0 errors. PHPStan level 5: no errors.
+
 ## [4.0.0] — 2026-08-31
 
 A rewrite for the Adobe Commerce Marketplace technical requirements, plus fixes
