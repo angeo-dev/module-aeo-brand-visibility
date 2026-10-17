@@ -77,7 +77,12 @@
                 <field id="model" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GptModel</source_model>
-                    <comment>Model identifiers change often; pick the closest match and adjust after a provider release.</comment>
+                    <comment>Model identifiers change often. If the model you want is not listed, use Custom model ID below.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="custom_model" translate="label comment" type="text" sortOrder="31" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Custom model ID</label>
+                    <comment>Optional. Any model ID from the provider's current model list. When filled in, it is used instead of the dropdown.</comment>
                     <depends><field id="enabled">1</field></depends>
                 </field>
                 <field id="grounding" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
@@ -118,7 +123,12 @@
                 <field id="model" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\ClaudeModel</source_model>
-                    <comment>Model identifiers change often; pick the closest match and adjust after a provider release.</comment>
+                    <comment>Model identifiers change often. If the model you want is not listed, use Custom model ID below.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="custom_model" translate="label comment" type="text" sortOrder="31" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Custom model ID</label>
+                    <comment>Optional. Any model ID from the provider's current model list. When filled in, it is used instead of the dropdown.</comment>
                     <depends><field id="enabled">1</field></depends>
                 </field>
                 <field id="grounding" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
@@ -159,7 +169,12 @@
                 <field id="model" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\PerplexityModel</source_model>
-                    <comment>Model identifiers change often; pick the closest match and adjust after a provider release.</comment>
+                    <comment>Model identifiers change often. If the model you want is not listed, use Custom model ID below.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="custom_model" translate="label comment" type="text" sortOrder="31" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Custom model ID</label>
+                    <comment>Optional. Any model ID from the provider's current model list. When filled in, it is used instead of the dropdown.</comment>
                     <depends><field id="enabled">1</field></depends>
                 </field>
 
@@ -195,7 +210,12 @@
                 <field id="model" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GeminiModel</source_model>
-                    <comment>Model identifiers change often; pick the closest match and adjust after a provider release.</comment>
+                    <comment>Model identifiers change often. If the model you want is not listed, use Custom model ID below.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="custom_model" translate="label comment" type="text" sortOrder="31" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Custom model ID</label>
+                    <comment>Optional. Any model ID from the provider's current model list. When filled in, it is used instead of the dropdown.</comment>
                     <depends><field id="enabled">1</field></depends>
                 </field>
                 <field id="grounding" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
@@ -236,7 +256,12 @@
                 <field id="model" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
                     <label>Model</label>
                     <source_model>Angeo\AeoBrandVisibility\Model\Config\Source\GroqModel</source_model>
-                    <comment>Model identifiers change often; pick the closest match and adjust after a provider release.</comment>
+                    <comment>Model identifiers change often. If the model you want is not listed, use Custom model ID below.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="custom_model" translate="label comment" type="text" sortOrder="31" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Custom model ID</label>
+                    <comment>Optional. Any model ID from the provider's current model list. When filled in, it is used instead of the dropdown.</comment>
                     <depends><field id="enabled">1</field></depends>
                 </field>
 

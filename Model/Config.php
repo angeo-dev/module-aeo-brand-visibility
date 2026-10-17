@@ -296,6 +296,13 @@ class Config
      */
     public function getProviderModel(string $providerId, string $default = ''): string
     {
+        // A hand-entered model ID wins over the dropdown (since 4.1.0), so a
+        // model released after this module version can be used without a release.
+        $custom = trim($this->stringValue($this->providerPath($providerId, 'custom_model'), ''));
+        if ($custom !== '') {
+            return $custom;
+        }
+
         return $this->stringValue($this->providerPath($providerId, 'model'), $default);
     }
 

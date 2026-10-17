@@ -25,7 +25,7 @@
             </chatgpt>
             <claude>
                 <enabled>0</enabled>
-                <model>claude-sonnet-4-6</model>
+                <model>claude-sonnet-5-5</model>
                 <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
                 <temperature>0.3</temperature>
@@ -41,7 +41,7 @@
             </perplexity>
             <gemini>
                 <enabled>0</enabled>
-                <model>gemini-2.0-flash</model>
+                <model>gemini-2.5-flash</model>
                 <grounding>0</grounding>
                 <max_tokens>800</max_tokens>
                 <temperature>0.3</temperature>

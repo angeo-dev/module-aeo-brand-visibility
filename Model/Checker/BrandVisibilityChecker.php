@@ -24,11 +24,19 @@ use Magento\Store\Api\Data\StoreInterface;
  *
  * The audited store view is now passed through to the service, so a multi-store
  * audit scores each store against its own brand configuration.
+ *
+ * Since 4.1.0 every result carries details['score_group'] = 'visibility', so
+ * angeo/module-aeo-audit 4.3+ reports it next to the readiness score instead of
+ * blending a measurement of what assistants say into a score of what the store
+ * controls. A switched-off check is details['applicable'] = false: it used to
+ * return WARN at full weight, which lowered the audit score of every store that
+ * had the module installed but disabled.
  */
 class BrandVisibilityChecker extends AbstractChecker
 {
     private const CODE = 'brand_visibility';
     private const WEIGHT = 1.0;
+    private const SCORE_GROUP = 'visibility';
 
     /**
      * @param HttpCache $httpCache Shared HTTP cache required by the base checker.
@@ -104,10 +112,9 @@ class BrandVisibilityChecker extends AbstractChecker
         $config = $this->config->withStore($storeId);
 
         if (!$config->isEnabled()) {
-            return $this->warn(
-                'Brand visibility monitoring is switched off for this store view.',
-                'Enable it under Stores > Configuration > Angeo AEO > Brand Visibility > General.',
-                ['enabled' => false, 'store_id' => $storeId]
+            return $this->pass(
+                'Brand visibility monitoring is switched off for this store view (not scored).',
+                $this->group(['enabled' => false, 'store_id' => $storeId, 'applicable' => false])
             );
         }
 
@@ -115,7 +122,7 @@ class BrandVisibilityChecker extends AbstractChecker
             return $this->fail(
                 'No brand name is configured.',
                 'Set the brand name under Stores > Configuration > Angeo AEO > Brand Visibility > General.',
-                ['brand_name' => null, 'store_id' => $storeId]
+                $this->group(['brand_name' => null, 'store_id' => $storeId])
             );
         }
 
@@ -125,7 +132,7 @@ class BrandVisibilityChecker extends AbstractChecker
             return $this->fail(
                 'The brand visibility check could not run: ' . $e->getMessage(),
                 'Verify the provider API keys and that at least one provider is enabled.',
-                ['exception_class' => $e::class, 'store_id' => $storeId]
+                $this->group(['exception_class' => $e::class, 'store_id' => $storeId])
             );
         }
 
@@ -142,7 +149,7 @@ class BrandVisibilityChecker extends AbstractChecker
      */
     private function buildResult(BrandVisibilityReport $report, Config $config, int $storeId): CheckResult
     {
-        $details = [
+        $details = $this->group([
             'store_id' => $storeId,
             'score' => $report->getOverallScore(),
             'score_margin' => $report->getScoreMargin(),
@@ -159,7 +166,7 @@ class BrandVisibilityChecker extends AbstractChecker
             'accuracy_issues' => $report->accuracyIssueCount(),
             'tone' => $report->toneCounts(),
             'from_cache' => $report->fromCache,
-        ];
+        ]);
 
         if (!$report->hasData()) {
             return $this->fail(
@@ -199,5 +206,16 @@ class BrandVisibilityChecker extends AbstractChecker
             $score >= $config->getWarnThreshold() => $this->warn($message, $recommendation, $details),
             default => $this->fail($message, $recommendation, $details),
         };
+    }
+
+    /**
+     * Tag details so the audit reports this result as measured visibility.
+     *
+     * @param array<string, mixed> $details
+     * @return array<string, mixed>
+     */
+    private function group(array $details): array
+    {
+        return $details + ['score_group' => self::SCORE_GROUP];
     }
 }

@@ -4,6 +4,35 @@ All notable changes to `angeo/module-aeo-brand-visibility` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
+## [4.1.0] — 2026-10-16
+
+### Changed
+
+- **Reported as measured visibility, not readiness.** Every result carries
+  `details['score_group'] = 'visibility'`, so `angeo/module-aeo-audit` 4.3+
+  shows it on its own line instead of blending it into the readiness score.
+  Requires `angeo/module-aeo-audit` ^4.3.
+- **Whole-word matching for brand and competitor names.** Substring search
+  matched short names inside other words ("Aria" in "variable"). New
+  `Service\Analysis\TermMatcher`, Unicode-aware; punctuation is a boundary.
+- **Model lists updated.** Claude: `claude-sonnet-5-5` (default),
+  `claude-opus-5-5`, `claude-haiku-5-5`. Gemini 2.0 options removed; Gemini
+  default is now `gemini-2.5-flash`.
+- README: compatibility now says Magento 2.4.6 – 2.4.9, like the badge.
+- README: explains that API answers are not what a shopper sees in the apps or
+  in Google AI Mode.
+
+### Added
+
+- **Custom model ID** field for each provider. When filled in, it overrides the
+  dropdown, so a new model can be used without a module release.
+
+### Fixed
+
+- **A switched-off check lowered the audit score.** With the module installed
+  but disabled for a store view, the checker returned WARN at full weight. It
+  now returns `applicable: false` and is left out of the score.
+
 ## [4.0.1] — 2026-09-16
 
 A packaging and code-quality release. Scoring, prompts and provider calls do

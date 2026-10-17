@@ -52,8 +52,8 @@ class AccuracyChecker
             if ($term === '') {
                 continue;
             }
-            $position = mb_strpos($text, $term);
-            if ($position === false) {
+            $position = TermMatcher::position($text, $term);
+            if ($position === null) {
                 continue;
             }
 

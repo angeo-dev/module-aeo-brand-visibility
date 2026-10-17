@@ -116,6 +116,6 @@ class GeminiProvider extends AbstractHttpProvider
      */
     protected function getDefaultModel(): string
     {
-        return 'gemini-2.0-flash';
+        return 'gemini-2.5-flash';
     }
 }

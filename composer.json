@@ -3,7 +3,7 @@
     "description": "Live AI brand visibility audit for Magento 2. Queries ChatGPT, Claude, Perplexity, Gemini and Groq — with optional web-grounded modes — repeats each prompt to produce a confidence interval, tracks competitor share-of-voice, and registers as a live_signal checker in angeo/module-aeo-audit.",
     "type": "magento2-module",
     "license": "MIT",
-    "version": "4.0.1",
+    "version": "4.1.0",
     "keywords": [
         "magento2",
         "aeo",
@@ -41,7 +41,7 @@
         "magento/module-email": "^101.1",
         "magento/module-store": "^101.1",
         "magento/module-ui": "^101.2",
-        "angeo/module-aeo-audit": "^3.0||^4.0"
+        "angeo/module-aeo-audit": "^4.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5",

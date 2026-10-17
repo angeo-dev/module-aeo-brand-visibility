@@ -13,8 +13,8 @@ use Magento\Framework\Data\OptionSourceInterface;
 /**
  * Perplexity Sonar models offered in the admin.
  *
- * Model identifiers change often. The field accepts any value, so a model
- * released after this version can be entered by hand.
+ * Model identifiers change often. A model released after this version can be
+ * entered in the "Custom model ID" field.
  */
 class PerplexityModel implements OptionSourceInterface
 {

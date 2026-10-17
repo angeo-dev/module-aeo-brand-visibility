@@ -13,8 +13,8 @@ use Magento\Framework\Data\OptionSourceInterface;
 /**
  * Google Gemini models offered in the admin.
  *
- * Model identifiers change often. The field accepts any value, so a model
- * released after this version can be entered by hand.
+ * Model identifiers change often. A model released after this version can be
+ * entered in the "Custom model ID" field.
  */
 class GeminiModel implements OptionSourceInterface
 {
@@ -24,8 +24,6 @@ class GeminiModel implements OptionSourceInterface
     public function toOptionArray(): array
     {
         return [
-            ['value' => 'gemini-2.0-flash', 'label' => __('gemini-2.0-flash (recommended)')],
-            ['value' => 'gemini-2.0-flash-lite', 'label' => __('gemini-2.0-flash-lite')],
             ['value' => 'gemini-2.5-flash', 'label' => __('gemini-2.5-flash')],
             ['value' => 'gemini-2.5-pro', 'label' => __('gemini-2.5-pro')],
         ];

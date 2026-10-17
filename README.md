@@ -46,6 +46,12 @@ A sixth signal, **negative tone**, is not weighted. It reduces the earned score
 by the configured penalty, because "avoid this shop" is worse than not being
 mentioned at all.
 
+Brand and competitor names are matched as whole words (since 4.1.0): "Aria"
+no longer matches inside "variable". Punctuation counts as a boundary, so
+"angeo" still matches in "angeo.dev". Whole-word matching cannot tell two real
+businesses with the same name apart; add your domain or a specific alias as a
+brand term for that.
+
 On top of the per-answer score the module reports:
 
 - **Share of voice** — your weight against every tracked competitor in the same
@@ -59,7 +65,19 @@ On top of the per-answer score the module reports:
 
 ## Reading the score honestly
 
-Two things decide whether the number means anything.
+**This is a separate number from the AEO audit score.** The audit
+(`angeo/module-aeo-audit` 4.3+) scores technical readiness: things you control.
+This module measures what assistants actually say. The audit shows it on its
+own line and does not mix it into the readiness score. When the module is
+switched off for a store view, the audit leaves it out completely.
+
+**API answers are not the shopper's screen.** The module calls each provider's
+API. A shopper using the ChatGPT or Gemini app, or Google AI Mode, can get a
+different answer: those products add personalisation, location, shopping
+features and their own retrieval. Treat the score as a repeatable trend line,
+not as a copy of what one shopper sees. Google AI Mode is not measured.
+
+Two more things decide whether the number means anything.
 
 **Grounding.** A model answering from memory reflects a training set that is
 months old. Nothing you change on your store will move that number this quarter.
@@ -78,9 +96,9 @@ that margin is noise, and the alert system will not fire on it.
 
 ## Requirements
 
-- Magento Open Source or Adobe Commerce 2.4.6 – 2.4.8
+- Magento Open Source or Adobe Commerce 2.4.6 – 2.4.9
 - PHP 8.1 – 8.5
-- `angeo/module-aeo-audit` 3.x or 4.x
+- `angeo/module-aeo-audit` 4.3 or later
 - At least one AI provider API key
 - A running message queue consumer (or inline run mode, see below)
 
@@ -138,7 +156,9 @@ any other.
 ### Providers
 
 Each provider has its own group with the same fields: enable, API key (stored
-encrypted), model, grounding, max tokens, temperature and timeout.
+encrypted), model, custom model ID, grounding, max tokens, temperature and
+timeout. Model lists go out of date fast: if the model you want is not in the
+dropdown, enter its ID in **Custom model ID**. It overrides the dropdown.
 
 | Provider | Grounded answers | Notes |
 | --- | --- | --- |

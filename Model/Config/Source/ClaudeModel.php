@@ -13,8 +13,8 @@ use Magento\Framework\Data\OptionSourceInterface;
 /**
  * Anthropic Claude models offered in the admin.
  *
- * Model identifiers change often. The field accepts any value, so a model
- * released after this version can be entered by hand.
+ * Model identifiers change often. A model released after this version can be
+ * entered in the "Custom model ID" field.
  */
 class ClaudeModel implements OptionSourceInterface
 {
@@ -24,9 +24,10 @@ class ClaudeModel implements OptionSourceInterface
     public function toOptionArray(): array
     {
         return [
-            ['value' => 'claude-sonnet-4-6', 'label' => __('claude-sonnet-4-6 (recommended)')],
-            ['value' => 'claude-opus-4-6', 'label' => __('claude-opus-4-6')],
-            ['value' => 'claude-haiku-4-5', 'label' => __('claude-haiku-4-5')],
+            ['value' => 'claude-sonnet-5-5', 'label' => __('claude-sonnet-5-5 (recommended)')],
+            ['value' => 'claude-opus-5-5', 'label' => __('claude-opus-5-5')],
+            ['value' => 'claude-haiku-5-5', 'label' => __('claude-haiku-5-5')],
+            ['value' => 'claude-sonnet-4-6', 'label' => __('claude-sonnet-4-6 (previous)')],
         ];
     }
 }

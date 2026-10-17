@@ -114,6 +114,6 @@ class ClaudeProvider extends AbstractHttpProvider
      */
     protected function getDefaultModel(): string
     {
-        return 'claude-sonnet-4-6';
+        return 'claude-sonnet-5-5';
     }
 }

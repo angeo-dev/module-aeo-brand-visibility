@@ -283,7 +283,7 @@ class ResponseAnalyzer
     private function containsAny(string $text, array $terms): bool
     {
         foreach ($terms as $term) {
-            if ($term !== '' && str_contains($text, $term)) {
+            if ($term !== '' && TermMatcher::contains($text, $term)) {
                 return true;
             }
         }
@@ -305,8 +305,8 @@ class ResponseAnalyzer
             if ($term === '') {
                 continue;
             }
-            $position = mb_strpos($text, $term);
-            if ($position !== false && ($earliest === null || $position < $earliest)) {
+            $position = TermMatcher::position($text, $term);
+            if ($position !== null && ($earliest === null || $position < $earliest)) {
                 $earliest = $position;
             }
         }
@@ -328,7 +328,7 @@ class ResponseAnalyzer
             if ($term === '') {
                 continue;
             }
-            $best = max($best, mb_substr_count($text, $term));
+            $best = max($best, TermMatcher::count($text, $term));
         }
 
         return $best;
@@ -347,8 +347,8 @@ class ResponseAnalyzer
     private function hasPhraseNearby(string $text, array $terms, array $phrases, int $before, int $after): bool
     {
         foreach ($terms as $term) {
-            $position = $term !== '' ? mb_strpos($text, $term) : false;
-            if ($position === false) {
+            $position = TermMatcher::position($text, $term);
+            if ($position === null) {
                 continue;
             }
 
@@ -378,7 +378,7 @@ class ResponseAnalyzer
             if ($term === '') {
                 continue;
             }
-            $pattern = '/(?:^|\n)\s*(?:[-*\x{2022}]|\d+[.)])\s*\**\s*' . preg_quote($term, '/') . '/u';
+            $pattern = '/(?:^|\n)\s*(?:[-*\x{2022}]|\d+[.)])\s*\**\s*' . preg_quote($term, '/') . '(?![\p{L}\p{N}])/u';
             if (preg_match($pattern, $text) === 1) {
                 return true;
             }
