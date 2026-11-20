@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Angeo (angeo.dev). All rights reserved.
+ * See LICENSE for license details.
+ *
+ * Dispatched only by angeo/module-ai-assist. Without it, this does nothing.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="angeo_ai_assist_context">
+        <observer name="angeo_brand_visibility_ai_assist_context" instance="Angeo\AeoBrandVisibility\Observer\AiAssistContext"/>
+    </event>
+</config>

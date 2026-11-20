@@ -222,3 +222,126 @@
     display: block;
     margin-top: 3px;
 }
+
+/* 4.2.0 — charts. No inline styles: widths are set through the DOM by charts.js. */
+.angeo-bv-charts {
+    display: grid;
+    gap: 20px 32px;
+    grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+}
+
+.angeo-bv-chart h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 10px;
+}
+
+.angeo-bv-chart-score {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+}
+
+.angeo-bv-gauge-track { fill: none; stroke: #eceff1; stroke-width: 10; }
+.angeo-bv-gauge-band { fill: none; stroke: #bcd9ec; stroke-width: 16; }
+.angeo-bv-gauge-arc { fill: none; stroke: #4690bf; stroke-linecap: round; stroke-width: 10; }
+.angeo-bv-gauge-a, .angeo-bv-gauge-b { stroke: #1d9e75; }
+.angeo-bv-gauge-c { stroke: #4690bf; }
+.angeo-bv-gauge-d { stroke: #d97706; }
+.angeo-bv-gauge-f { stroke: #dc2626; }
+.angeo-bv-gauge-num { fill: #303030; font-size: 30px; font-weight: 700; text-anchor: middle; }
+.angeo-bv-gauge-sub { fill: #8a8a8a; font-size: 11px; text-anchor: middle; }
+
+.angeo-bv-track {
+    background: #eceff1;
+    border-radius: 3px;
+    display: block;
+    height: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.angeo-bv-fill { background: #4690bf; display: block; height: 100%; }
+.angeo-bv-fill-recommended { background: #2d6a94; }
+.angeo-bv-fill-url_cited { background: #1d9e75; }
+.angeo-bv-fill-first_result { background: #f97316; }
+
+.angeo-bv-funnel-row, .angeo-bv-comp-row, .angeo-bv-prov-row {
+    align-items: center;
+    display: grid;
+    gap: 4px 12px;
+    grid-template-columns: minmax(0, 13rem) 1fr 7rem;
+    margin-bottom: 8px;
+}
+
+.angeo-bv-funnel-label, .angeo-bv-comp-label, .angeo-bv-prov-label { font-weight: 600; overflow-wrap: anywhere; }
+.angeo-bv-funnel-value, .angeo-bv-comp-value, .angeo-bv-prov-value { font-variant-numeric: tabular-nums; text-align: right; }
+.angeo-bv-funnel-note { color: #8a8a8a; font-size: 1.1rem; grid-column: 2 / -1; margin-top: -4px; }
+.angeo-bv-comp-brand .angeo-bv-comp-label { color: #2d6a94; }
+.angeo-bv-comp-brand .angeo-bv-fill { background: #f97316; }
+
+.angeo-bv-prov-track {
+    background: #eceff1;
+    border-radius: 3px;
+    display: block;
+    height: 14px;
+    position: relative;
+}
+
+.angeo-bv-prov-bar { background: #cfe2f0; border-radius: 3px; display: block; height: 100%; }
+.angeo-bv-prov-whisker {
+    border-left: 2px solid #2d6a94;
+    border-right: 2px solid #2d6a94;
+    box-sizing: border-box;
+    height: 8px;
+    position: absolute;
+    top: 3px;
+}
+
+.angeo-bv-prov-whisker::after {
+    border-top: 2px solid #2d6a94;
+    content: '';
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 3px;
+}
+
+.angeo-bv-prov-dot {
+    background: #2d6a94;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    height: 10px;
+    margin-left: -5px;
+    position: absolute;
+    top: 2px;
+    width: 10px;
+}
+
+.angeo-bv-trend-wrap { margin-bottom: 14px; }
+.angeo-bv-trend { display: block; height: auto; max-width: 720px; width: 100%; }
+.angeo-bv-trend-grid { stroke: #eceff1; }
+.angeo-bv-trend-tick { fill: #8a8a8a; font-size: 10px; }
+.angeo-bv-trend-band { fill: #cfe2f0; opacity: .7; }
+.angeo-bv-trend-line { fill: none; stroke: #2d6a94; stroke-width: 2; }
+.angeo-bv-trend-dot { fill: #2d6a94; stroke: #fff; stroke-width: 1.5; }
+
+.angeo-bv-howto { margin-top: 18px; }
+.angeo-bv-howto summary { color: #2d6a94; cursor: pointer; font-weight: 600; }
+.angeo-bv-howto dl {
+    background: #f8f9fa;
+    display: grid;
+    gap: 6px 16px;
+    grid-template-columns: max-content 1fr;
+    margin: 10px 0 0;
+    padding: 12px 14px;
+}
+
+.angeo-bv-howto dt { color: #5a5a5a; font-weight: 600; }
+.angeo-bv-howto dd { margin: 0; }
+
+@media (max-width: 767px) {
+    .angeo-bv-funnel-row, .angeo-bv-comp-row, .angeo-bv-prov-row { grid-template-columns: 1fr 6rem; }
+    .angeo-bv-track, .angeo-bv-prov-track { grid-column: 1 / -1; order: 3; }
+    .angeo-bv-howto dl { grid-template-columns: 1fr; }
+}

@@ -258,6 +258,18 @@ without the ability to spend money on API calls:
 
 ---
 
+### Charts and the AI assistant (4.2.0)
+
+After a run, the dashboard draws the score with its margin, the step from
+mention to recommendation, the score per assistant with the margin per
+prompt, and how often competitors are named. "How to read these charts"
+explains each one. The page of a stored run shows the same charts.
+
+Install [`angeo/module-ai-assist`](https://github.com/angeo-dev/module-ai-assist)
+to add an "Ask the AI assistant" panel: it explains a run in plain words and
+suggests next steps with your own Claude, OpenAI or Gemini key. Off by
+default.
+
 ## Scheduling and retention
 
 Scheduled runs use the dedicated `angeo_brand_visibility` cron group, so slow

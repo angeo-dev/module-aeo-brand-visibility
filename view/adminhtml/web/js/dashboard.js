@@ -9,8 +9,9 @@
  */
 define([
     'jquery',
-    'mage/translate'
-], function ($, $t) {
+    'mage/translate',
+    'Angeo_AeoBrandVisibility/js/charts'
+], function ($, $t, charts) {
     'use strict';
 
     var SIGNAL_LABELS = {
@@ -128,6 +129,16 @@ define([
         }
 
         /**
+         * Render the charts of a finished run (4.2.0).
+         *
+         * @param {Object} data
+         */
+        function renderCharts(data) {
+            charts.renderRun($root.find('[data-role="charts"]'), data, config.brandName);
+            togglePanel('charts-panel', true);
+        }
+
+        /**
          * Render the signal list.
          *
          * @param {Object} rates
@@ -242,7 +253,13 @@ define([
          * @param {Array} rows
          */
         function renderHistory(rows) {
-            var $body = $root.find('[data-role="history"]').empty();
+            var $body = $root.find('[data-role="history"]').empty(),
+                $trend = $root.find('[data-role="trend"]').empty(),
+                chart = charts.trend(rows);
+
+            if (chart) {
+                $trend.append(chart);
+            }
 
             (rows || []).forEach(function (row) {
                 var $row = $('<tr/>');
@@ -332,10 +349,17 @@ define([
                     setStatus($t('Run complete.'), 'success');
                     stopPolling();
                     renderSummary(response);
+                    renderCharts(response);
                     renderSignals(response.signal_rates);
                     renderCompetitive(response);
                     renderResults(response.results);
                     loadHistory();
+                    // The optional AI assistant (angeo/module-ai-assist)
+                    // waits for this to know which run to explain.
+                    $(document).trigger('angeo-ai-assist:ref', {
+                        source: 'brand_visibility',
+                        ref: String(response.id)
+                    });
 
                     return;
                 }

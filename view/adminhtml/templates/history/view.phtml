@@ -57,6 +57,11 @@ $record = $block->getRecord();
         </div>
 
         <div class="angeo-bv-panel">
+            <div class="angeo-bv-charts"
+                 data-mage-init='<?= $block->escapeHtmlAttr($block->getChartConfigJson()) ?>'></div>
+        </div>
+
+        <div class="angeo-bv-panel">
             <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Answers')) ?></h2>
             <table class="data-grid angeo-bv-table">
                 <thead>

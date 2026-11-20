@@ -50,6 +50,25 @@
         <dl class="angeo-bv-meta" data-role="summary-meta"></dl>
     </div>
 
+    <div class="angeo-bv-panel" data-role="charts-panel" hidden="hidden">
+        <div class="angeo-bv-charts" data-role="charts"></div>
+        <details class="angeo-bv-howto">
+            <summary><?= $block->escapeHtml(__('How to read these charts')) ?></summary>
+            <dl>
+                <dt><?= $block->escapeHtml(__('Visibility score')) ?></dt>
+                <dd><?= $block->escapeHtml(__('What AI assistants say about the brand when asked about its category: named, recommended, cited, named first, and in what tone. It is an outcome you influence, not a setting.')) ?></dd>
+                <dt><?= $block->escapeHtml(__('± margin')) ?></dt>
+                <dd><?= $block->escapeHtml(__('Each prompt is asked several times, because answers vary. ± is the 95% confidence margin. A change smaller than the margin is noise.')) ?></dd>
+                <dt><?= $block->escapeHtml(__('Mentioned but not cited')) ?></dt>
+                <dd><?= $block->escapeHtml(__('The assistant knows the brand but does not use its site as a source. That is an authority problem: improve citable content and structured data.')) ?></dd>
+                <dt><?= $block->escapeHtml(__('API answers')) ?></dt>
+                <dd><?= $block->escapeHtml(__('The module asks the providers’ APIs. A shopper in the ChatGPT or Gemini app can get a different answer. Read the numbers as a trend, not as one shopper’s screen.')) ?></dd>
+                <dt><?= $block->escapeHtml(__('Grounding')) ?></dt>
+                <dd><?= $block->escapeHtml(__('A grounded assistant searches the web before it answers, so it reacts to your changes within days. One that answers from memory reflects training data that is months old.')) ?></dd>
+            </dl>
+        </details>
+    </div>
+
     <div class="angeo-bv-panel" data-role="signals-panel" hidden="hidden">
         <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Signals')) ?></h2>
         <ul class="angeo-bv-signals" data-role="signals"></ul>
@@ -103,6 +122,7 @@
 
     <div class="angeo-bv-panel">
         <h2 class="angeo-bv-heading"><?= $block->escapeHtml(__('Recent runs')) ?></h2>
+        <div class="angeo-bv-trend-wrap" data-role="trend"></div>
         <table class="data-grid angeo-bv-table">
             <thead>
                 <tr>

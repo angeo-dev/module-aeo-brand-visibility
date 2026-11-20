@@ -10,6 +10,7 @@ namespace Angeo\AeoBrandVisibility\Controller\Adminhtml\Run;
 
 use Angeo\AeoBrandVisibility\Api\AuditResultRepositoryInterface;
 use Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface;
+use Angeo\AeoBrandVisibility\Service\RunPayloadBuilder;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
@@ -33,7 +34,8 @@ class Status extends Action implements HttpGetActionInterface
     public function __construct(
         Context $context,
         private readonly JsonFactory $jsonFactory,
-        private readonly AuditResultRepositoryInterface $repository
+        private readonly AuditResultRepositoryInterface $repository,
+        private readonly RunPayloadBuilder $payloadBuilder
     ) {
         parent::__construct($context);
     }
@@ -76,44 +78,9 @@ class Status extends Action implements HttpGetActionInterface
      */
     private function buildCompletePayload(AuditResultInterface $row): array
     {
-        $results = [];
-        foreach ($row->getResultsDecoded() as $cell) {
-            $responses = (array) ($cell['responses'] ?? []);
-            $preview = isset($responses[0]) && is_string($responses[0])
-                ? mb_substr($responses[0], 0, self::RESPONSE_PREVIEW_CHARS)
-                : null;
+        $payload = $this->payloadBuilder->build($row, self::RESPONSE_PREVIEW_CHARS);
+        unset($payload['id'], $payload['brand_name'], $payload['brand_domain']);
 
-            $results[] = [
-                'provider_id' => (string) ($cell['provider_id'] ?? ''),
-                'provider_label' => (string) ($cell['provider_label'] ?? ''),
-                'prompt_key' => (string) ($cell['prompt_key'] ?? ''),
-                'prompt' => (string) ($cell['prompt'] ?? ''),
-                'samples' => (int) ($cell['samples'] ?? 0),
-                'score' => (int) ($cell['score'] ?? 0),
-                'score_margin' => (float) ($cell['score_margin'] ?? 0),
-                'signals' => (array) ($cell['signals'] ?? []),
-                'signal_rates' => (array) ($cell['signal_rates'] ?? []),
-                'meta' => (array) ($cell['meta'] ?? []),
-                'response' => $preview,
-                'error' => $cell['error'] ?? null,
-                'success' => empty($cell['error']),
-            ];
-        }
-
-        return [
-            'created_at' => (string) $row->getData(AuditResultInterface::CREATED_AT),
-            'overall_score' => $row->getOverallScore(),
-            'score_margin' => (float) $row->getData(AuditResultInterface::SCORE_MARGIN),
-            'grade' => $row->getGrade(),
-            'samples' => (int) $row->getData(AuditResultInterface::SAMPLES),
-            'signal_rates' => $row->getSignalRatesDecoded(),
-            'scores_by_provider' => $row->getProviderScoresDecoded(),
-            'competitive' => [
-                'share_of_voice' => (float) $row->getData(AuditResultInterface::SHARE_OF_VOICE),
-                'win_rate' => (float) $row->getData(AuditResultInterface::WIN_RATE),
-                'accuracy_issues' => (int) $row->getData(AuditResultInterface::ACCURACY_ISSUES),
-            ],
-            'results' => $results,
-        ];
+        return $payload;
     }
 }

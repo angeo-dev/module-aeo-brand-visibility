@@ -4,6 +4,31 @@ All notable changes to `angeo/module-aeo-brand-visibility` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
+## [4.2.0] — 2026-11-08
+
+### Added
+
+- **Charts** on the run page and on the page of a stored run: score ring
+  with its ± margin, "From mention to recommendation" (mentioned,
+  recommended, site cited, named first — share of all answers), "By
+  assistant" (bar per assistant, a dot per prompt with its margin), "Named
+  next to competitors" (answers naming each business, out of all answers),
+  and a score trend over recent runs with the margin as a band. Built with
+  the DOM in `js/charts.js`: no inline styles or scripts, provider text is
+  never inserted as HTML.
+- **"How to read these charts"**: margin, mentioned-but-not-cited, API
+  answers vs the apps, grounding.
+- A note under the funnel when assistants name the brand much more often
+  than they cite its site (an authority gap, not an awareness gap).
+- **Optional AI assistant.** With `angeo/module-ai-assist` installed and on,
+  the run pages get an "Ask the AI assistant" panel. This module answers its
+  `angeo_ai_assist_context` event with the run's facts, after checking
+  `Angeo_AeoBrandVisibility::view`. The dashboard announces a finished run
+  with the `angeo-ai-assist:ref` browser event. No dependency in either
+  direction.
+- `Service\RunPayloadBuilder`: one place that shapes a finished run, used by
+  the status endpoint, the run page and the assistant.
+
 ## [4.1.0] — 2026-10-16
 
 ### Changed

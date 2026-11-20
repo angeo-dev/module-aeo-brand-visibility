@@ -10,8 +10,10 @@ namespace Angeo\AeoBrandVisibility\Block\Adminhtml;
 
 use Angeo\AeoBrandVisibility\Api\Data\AuditResultInterface;
 use Angeo\AeoBrandVisibility\Controller\Adminhtml\History\View;
+use Angeo\AeoBrandVisibility\Service\RunPayloadBuilder;
 use Magento\Backend\Block\Template;
 use Magento\Backend\Block\Template\Context;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Registry;
 
 /**
@@ -27,7 +29,8 @@ class RecordView extends Template
     public function __construct(
         Context $context,
         private readonly Registry $registry,
-        array $data = []
+        array $data = [],
+        private readonly ?RunPayloadBuilder $payloadBuilder = null
     ) {
         parent::__construct($context, $data);
     }
@@ -54,6 +57,23 @@ class RecordView extends Template
         $record = $this->getRecord();
 
         return $record === null ? [] : $record->getResultsDecoded();
+    }
+
+    /**
+     * Component config for the charts of this run (4.2.0).
+     */
+    public function getChartConfigJson(): string
+    {
+        $record = $this->getRecord();
+        if ($record === null) {
+            return '{}';
+        }
+        $builder = $this->payloadBuilder ?? ObjectManager::getInstance()->get(RunPayloadBuilder::class);
+
+        return (string) json_encode(
+            ['Angeo_AeoBrandVisibility/js/record' => ['run' => $builder->build($record, 300)]],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
     }
 
     /**
