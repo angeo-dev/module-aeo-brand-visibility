@@ -4,6 +4,15 @@ All notable changes to `angeo/module-aeo-brand-visibility` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
+## [4.2.1] — 2026-11-24
+
+### Build
+
+- CI: `phpstan/phpstan` pinned below 2.3 and `laminas/laminas-code` below
+  4.18 in `require-dev`. With newer versions `bitexpert/phpstan-magento`
+  0.43 no longer generated Magento factory classes, and PHPStan reported
+  33 unknown `*Factory` classes. Dev-only; the module does not change.
+
 ## [4.2.0] — 2026-11-08
 
 ### Added
